@@ -1,78 +1,64 @@
 #ifndef GLUI_H
 #define GLUI_H
 
-#include "glass/src/glass.h"
+#include "winx/src/winx.h"
+#include "winx/src/event.h"
 #include "glass/src/math.h"
-
-#define GLUI_PAIRS_CAP 10
+#include "shl_str.h"
+#include "shl_defs.h"
+#include "renderer.h"
+#include "layout.h"
 
 typedef enum {
   GluiWidgetKindButton = 0,
 } GluiWidgetKind;
 
 typedef struct {
-  Str         text;
-  GlassObject body;
+  Str  text;
+  bool pressed;
 } GluiWidgetButton;
 
 typedef union {
   GluiWidgetButton button;
 } GluiWidgetAs;
 
-typedef enum {
-  GluiEventNone = 0,
-  GluiEventHover = 1 << 0,
-  GluiEventLeave = 1 << 1,
-  GluiEventPress = 1 << 2,
-  GluiEventRelease = 1 << 3,
-} GluiEvent;
+typedef struct {
+  Str  class;
+  Vec4 bg_color;
+  Vec4 fg_color;
+} GluiStyle;
 
-typedef enum {
-  GluiAnchorTopLeft = 0,
-  GluiAnchorTopRight,
-  GluiAnchorBottomLeft,
-  GluiAnchorBottomRight,
-} GluiAnchor;
-
-typedef enum {
-  GluiMarginTop = 0,
-  GluiMarginBottom,
-  GluiMarginLeft,
-  GluiMarginRight,
-} GluiMargin;
+typedef Da(GluiStyle) GluiStyles;
 
 typedef struct {
-  GluiEvent      *event;
-  GluiAnchor      anchor;
-  float           margin_values[4];
-} GluiWidgetConfig;
-
-typedef struct {
-  GluiWidgetConfig config;
-  GluiWidgetKind   kind;
-  GluiWidgetAs     as;
-  Vec2             pos;
-  Vec2             size;
-  Vec4             color;
+  GluiWidgetKind kind;
+  GluiWidgetAs   as;
+  GluiStyle      style;
+  Vec4           bounds;
 } GluiWidget;
 
 typedef Da(GluiWidget) GluiWidgets;
 
-typedef struct GluiPair GluiPair;
-
-struct GluiPair {
-  u32       index;
-  GluiPair *next;
-};
+typedef Da(WinxEvent) GluiEvents;
 
 typedef struct {
-  GluiWidgets  widgets;
-  GluiPair    *pairs[GLUI_PAIRS_CAP];
-  GlassShader  general_shader;
+  GluiWidgets   widgets;
+  GluiStyles    styles;
+  GluiRenderer  renderer;
+  GluiLayout    layout;
+  WinxWindow   *window;
+  GluiEvents    events;
 } Glui;
 
-Glui glui_init(u32 width, u32 height);
-void glui_resize(Glui *glui, u32 width, u32 height);
-void glui_render(Glui *glui);
+Glui      glui_init(WinxWindow *window);
+WinxEvent glui_get_event(Glui *glui);
+void      glui_next_frame(Glui *glui);
+
+GluiStyle *glui_get_style(Glui *glui, Str class);
+
+bool glui_button(Glui *glui, Str text, Vec4 color, Vec2 size);
+void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchor anchor,
+                      Vec4 color, Vec2 size);
+void glui_end_block(Glui *glui);
 
 #endif // GLUI_H

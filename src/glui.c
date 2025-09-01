@@ -1,87 +1,90 @@
 #include "glui.h"
-#include "glass/src/params.h"
-#include "vertices.h"
+#include "winx/src/event.h"
 
-static Str general_vertex_shader_src = STR_LIT(
-  "#version 330 core\n"
-  "uniform vec2 u_resolution;\n"
-  "layout (location = 0) in vec2 i_pos;\n"
-  "void main(void) {\n"
-  "  float x = i_pos.x / u_resolution.x * 2.0 - 1.0;\n"
-  "  float y = 1.0 - i_pos.y / u_resolution.y * 2.0;\n"
-  "  gl_Position = vec4(x, y, 0.0, 1.0);\n"
-  "}\n"
-);
-
-static Str general_fragment_shader_src = STR_LIT(
-  "#version 330 core\n"
-  "uniform vec4 u_color;\n"
-  "out vec4 frag_color;"
-  "void main(void) {\n"
-  "  frag_color = u_color;\n"
-  "}\n"
-);
-
-Glui glui_init(u32 width, u32 height) {
+Glui glui_init(WinxWindow *window) {
   Glui glui = {0};
 
-  GlassAttributes general_attributes = {0};
-  glass_push_attribute(&general_attributes, GlassAttributeKindFloat, 2);
-  glui.general_shader = glass_init_shader(general_vertex_shader_src,
-                                          general_fragment_shader_src,
-                                          &general_attributes);
-
-  glui_resize(&glui, width, height);
+  Vec2 size = vec2((f32) window->width, (f32) window->height);
+  glui.renderer = glui_init_renderer(size);
+  glui.layout = glui_init_layout(size);
+  glui.window = window;
 
   return glui;
 }
 
-static void glui_compute_layout(Glui *glui, u32 width, u32 height) {
-  // Code here
+void glui_next_frame(Glui *glui) {
+  glui_render(&glui->renderer);
+  glui_reset_layout(&glui->layout);
+
+  if (glui->renderer.size.x != (f32) glui->window->width) {
+    glui->renderer.size.x = (f32) glui->window->width;
+    glui->layout.size.x = (f32) glui->window->width;
+    glui->renderer.redraw = true;
+  }
+
+  if (glui->renderer.size.y != (f32) glui->window->height) {
+    glui->renderer.size.y = (f32) glui->window->height;
+    glui->layout.size.y = (f32) glui->window->height;
+    glui->renderer.redraw = true;
+  }
+
+  glui->events.len = 0;
+  WinxEvent event;
+  while ((event = winx_get_event(glui->window, false)).kind != WinxEventKindNone)
+    DA_APPEND(glui->events, event);
 }
 
-void glui_resize(Glui *glui, u32 width, u32 height) {
-  glui_compute_layout(glui, width, height);
+GluiStyle *glui_get_style(Glui *glui, Str class) {
+  for (u32 i = 0; i < glui->styles.len; ++i)
+    if (str_eq(glui->styles.items[i].class, class))
+      return glui->styles.items + i;
 
-  glass_set_param_2f(&glui->general_shader, "u_resolution",
-                     vec2((f32) width, (f32) height));
+  GluiStyle style = {0};
+  style.class = class;
+  DA_APPEND(glui->styles, style);
 
-  for (u32 i = 0; i < GLUI_PAIRS_CAP; ++i) {
-    GluiPair *pair = glui->pairs[i];
-
-    while (pair) {
-      GluiWidget *widget = glui->widgets.items + pair->index;
-
-      glass_set_param_4f(&glui->general_shader, "u_color", widget->color);
-
-      switch (widget->kind) {
-      case GluiWidgetKindButton: {
-        Vec2 vertices[4];
-        Vec2 *vertices_ptr = &*vertices;
-        u32 vertices_size = glui_gen_quad_vertices(&vertices_ptr,
-                                                   widget->pos,
-                                                   widget->size);
-        u32 indices[] = { 0, 1, 2, 2, 1, 3 };
-
-        glass_put_object_data(&widget->as.button.body, vertices,
-                              vertices_size, indices, sizeof(indices),
-                              6, true);
-      } break;
-      }
-
-      pair = pair->next;
-    }
-  }
+  return glui->styles.items + glui->styles.len - 1;
 }
 
-void glui_render(Glui *glui) {
-  for (u32 i = 0; i < glui->widgets.len; ++i) {
-    GluiWidget *widget = glui->widgets.items + i;
-
-    switch (widget->kind) {
-    case GluiWidgetKindButton: {
-      glass_render_object(&widget->as.button.body);
-    } break;
+static WinxEvent glui_get_event_of_kind(Glui *glui, WinxEventKind kind) {
+  for (u32 i = 0; i < glui->events.len; ++i) {
+    if (glui->events.items[i].kind == kind) {
+      WinxEvent event = glui->events.items[i];
+      return event;
     }
   }
+
+  return (WinxEvent) { WinxEventKindNone, {} };
+}
+
+bool glui_button(Glui *glui, Str text, Vec4 color, Vec2 size) {
+  Vec4 bounds = glui_compute_bounds(&glui->layout, size, false);
+  glui_push_quad(&glui->renderer, bounds, color);
+
+  (void) text;
+
+  WinxEvent event = glui_get_event_of_kind(glui, WinxEventKindButtonPress);
+
+  if (event.kind != WinxEventKindButtonPress)
+    return false;
+
+  f32 x = (f32) event.as.button_press.x;
+  f32 y = (f32) event.as.button_press.y;
+
+  if (x < bounds.x || x > bounds.x + bounds.z ||
+      y < bounds.y || y > bounds.y + bounds.w)
+    return false;
+
+  return true;
+}
+
+void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchor anchor,
+                      Vec4 color, Vec2 size) {
+  Vec4 bounds = glui_compute_bounds(&glui->layout, size, false);
+  glui_push_quad(&glui->renderer, bounds, color);
+  glui_push_block(&glui->layout, bounds, margin, anchor);
+}
+
+void glui_end_block(Glui *glui) {
+  glui_pop_block(&glui->layout);
 }

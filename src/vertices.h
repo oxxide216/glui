@@ -1,9 +1,12 @@
-#ifndef VERTICES_H
-#define VERTICES_H
+#ifndef GLUI_VERTICES_H
+#define GLUI_VERTICES_H
 
+#include "glass/src/glass.h"
 #include "glass/src/math.h"
-#include "shl_defs.h"
+#include "renderer.h"
 
-u32 glui_gen_quad_vertices(Vec2 **vertices, Vec2 pos, Vec2 size);
+void glui_push_quad_vertices(GluiGeneralVertices *vertices,
+                             GluiIndices *indices, Vec4 bounds,
+                             Vec4 color);
 
-#endif // VERTICES_H
+#endif // GLUI_VERTICES_H

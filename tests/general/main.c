@@ -1,12 +1,14 @@
 #include "winx/src/winx.h"
 #include "winx/src/event.h"
 #include "glui.h"
-#include "widgets.h"
 #include "shl_log.h"
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-bool process_event(WinxEvent *event, Glui *glui) {
+#define WHITE vec4(1.0, 1.0, 1.0, 1.0)
+#define RED   vec4(1.0, 0.0, 0.0, 1.0)
+
+bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
     return false;
   } else if (event->kind == WinxEventKindResize) {
@@ -14,10 +16,20 @@ bool process_event(WinxEvent *event, Glui *glui) {
     u32 height = event->as.resize.height;
 
     glass_resize(width, height);
-    glui_resize(glui, width, height);
   }
 
   return true;
+}
+
+void render_ui(Glui *glui) {
+  glui_begin_block(glui, vec2(20.0, 20.0), GluiAnchorTop,
+                   WHITE, vec2(640.0, 480.0));
+
+  bool clicked = glui_button(glui, STR_LIT("Click me!"), RED, vec2(60.0, 30.0));
+  if (clicked)
+    INFO("Button was clicked!\n");
+
+  glui_end_block(glui);
 }
 
 int main(void) {
@@ -26,22 +38,19 @@ int main(void) {
                                        640, 480, WinxGraphicsModeOpenGL,
                                        NULL);
   glass_init();
-  Glui glui = glui_init(window.width, window.height);
-
-  GluiWidgetConfig config = { NULL, GluiAnchorTopLeft, {} };
-  glui_button(&glui, STR_LIT("Click me!"), &config);
+  Glui glui = glui_init(&window);
 
   bool is_running = true;
   while (is_running) {
-    WinxEvent event;
-    while ((event = winx_get_event(&window, false)).kind != WinxEventKindNone) {
-      is_running = process_event(&event, &glui);
+    for (u32 i = 0; i < glui.events.len; ++i) {
+      is_running = process_event(glui.events.items + i);
       if (!is_running)
         break;
     }
 
     glass_clear_screen(0.0, 0.0, 0.0, 1.0);
-    glui_render(&glui);
+    render_ui(&glui);
+    glui_next_frame(&glui);
     winx_draw(&window);
   }
 

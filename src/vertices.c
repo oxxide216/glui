@@ -1,10 +1,34 @@
 #include "vertices.h"
 
-u32 glui_gen_quad_vertices(Vec2 **vertices, Vec2 pos, Vec2 size) {
-  (*vertices)[0] = vec2(pos.x, pos.y);
-  (*vertices)[1] = vec2(pos.x + size.x, pos.y);
-  (*vertices)[2] = vec2(pos.x, pos.y + size.y);
-  (*vertices)[3] = vec2(pos.x + size.x, pos.y + size.y);
+void glui_push_quad_vertices(GluiGeneralVertices *vertices,
+                             GluiIndices *indices, Vec4 bounds,
+                             Vec4 color) {
+  GluiGeneralVertex vertex0 = {
+    vec2(bounds.x, bounds.y),
+    color,
+  };
+  GluiGeneralVertex vertex1 = {
+    vec2(bounds.x + bounds.z, bounds.y),
+    color,
+  };
+  GluiGeneralVertex vertex2 = {
+    vec2(bounds.x, bounds.y + bounds.w),
+    color,
+  };
+  GluiGeneralVertex vertex3 = {
+    vec2(bounds.x + bounds.z, bounds.y + bounds.w),
+    color,
+  };
 
-  return 4 * sizeof(Vec2);
+  DA_APPEND(*indices, vertices->len);
+  DA_APPEND(*indices, vertices->len + 1);
+  DA_APPEND(*indices, vertices->len + 2);
+  DA_APPEND(*indices, vertices->len + 2);
+  DA_APPEND(*indices, vertices->len + 1);
+  DA_APPEND(*indices, vertices->len + 3);
+
+  DA_APPEND(*vertices, vertex0);
+  DA_APPEND(*vertices, vertex1);
+  DA_APPEND(*vertices, vertex2);
+  DA_APPEND(*vertices, vertex3);
 }
