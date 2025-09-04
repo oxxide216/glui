@@ -5,8 +5,9 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define WHITE vec4(1.0, 1.0, 1.0, 1.0)
-#define RED   vec4(1.0, 0.0, 0.0, 1.0)
+#define WHITE    vec4(1.0, 1.0, 1.0, 1.0)
+#define TGRAY    vec4(0.2, 0.2, 0.2, 0.5)
+#define RED      vec4(1.0, 0.0, 0.0, 1.0)
 
 bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
@@ -21,13 +22,25 @@ bool process_event(WinxEvent *event) {
   return true;
 }
 
-void render_ui(Glui *glui) {
-  glui_begin_block(glui, vec2(20.0, 20.0), GluiAnchorTop,
-                   WHITE, vec2(640.0, 480.0));
+void setup_styles(Glui *glui) {
+  glui_get_style(glui, "block")->bg_color = TGRAY;
+  glui_get_style(glui, "button")->bg_color = RED;
+}
 
-  bool clicked = glui_button(glui, STR_LIT("Click me!"), RED, vec2(60.0, 30.0));
-  if (clicked)
-    INFO("Button was clicked!\n");
+void render_ui(Glui *glui) {
+  glui_begin_block(glui, vec2(30.0, 30.0), GluiAnchorXLeft,
+                   GluiAnchorYTop, false, false,
+                   glui->size, "block");
+
+  bool clicked0 = glui_button(glui, STR_LIT("Click me!"),
+                             vec2(100.0, 100.0), "button");
+  if (clicked0)
+    INFO("Button 0 was clicked!\n");
+
+  bool clicked1 = glui_button(glui, STR_LIT("Click me!"),
+                             vec2(100.0, 100.0), "button");
+  if (clicked1)
+    INFO("Button 1 was clicked!\n");
 
   glui_end_block(glui);
 }
@@ -39,6 +52,7 @@ int main(void) {
                                        NULL);
   glass_init();
   Glui glui = glui_init(&window);
+  setup_styles(&glui);
 
   bool is_running = true;
   while (is_running) {
@@ -48,7 +62,7 @@ int main(void) {
         break;
     }
 
-    glass_clear_screen(0.0, 0.0, 0.0, 1.0);
+    glass_clear_screen(0.0, 0.0, 0.0, 0.0);
     render_ui(&glui);
     glui_next_frame(&glui);
     winx_draw(&window);

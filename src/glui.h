@@ -23,9 +23,9 @@ typedef union {
 } GluiWidgetAs;
 
 typedef struct {
-  Str  class;
-  Vec4 bg_color;
-  Vec4 fg_color;
+  char *class;
+  Vec4  bg_color;
+  Vec4  fg_color;
 } GluiStyle;
 
 typedef Da(GluiStyle) GluiStyles;
@@ -42,8 +42,9 @@ typedef Da(GluiWidget) GluiWidgets;
 typedef Da(WinxEvent) GluiEvents;
 
 typedef struct {
-  GluiWidgets   widgets;
+  Vec2          size;
   GluiStyles    styles;
+  GluiWidgets   widgets;
   GluiRenderer  renderer;
   GluiLayout    layout;
   WinxWindow   *window;
@@ -54,11 +55,12 @@ Glui      glui_init(WinxWindow *window);
 WinxEvent glui_get_event(Glui *glui);
 void      glui_next_frame(Glui *glui);
 
-GluiStyle *glui_get_style(Glui *glui, Str class);
+GluiStyle *glui_get_style(Glui *glui, char *class);
 
-bool glui_button(Glui *glui, Str text, Vec4 color, Vec2 size);
-void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchor anchor,
-                      Vec4 color, Vec2 size);
+bool glui_button(Glui *glui, Str text, Vec2 size, char *class);
+void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchorX anchor_x,
+                      GluiAnchorY anchor_y, bool fill_x, bool fill_y,
+                      Vec2 size, char *class);
 void glui_end_block(Glui *glui);
 
 #endif // GLUI_H
