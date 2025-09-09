@@ -1,6 +1,0 @@
-[submodule "libs/glass"]
-	path = libs/glass
-	url = https://github.com/oxxide216/glass
-[submodule "libs/winx"]
-	path = libs/winx
-	url = https://github.com/oxxide216/winx
