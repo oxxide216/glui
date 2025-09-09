@@ -25,6 +25,8 @@ typedef struct {
   GluiRenderer  renderer;
   WinxWindow   *window;
   GluiEvents    events;
+  Vec4          current_abs_bounds;
+  bool          are_bounds_abs;
 } Glui;
 
 Glui      glui_init(WinxWindow *window);
@@ -32,6 +34,7 @@ WinxEvent glui_get_event(Glui *glui);
 void      glui_next_frame(Glui *glui);
 
 GluiStyle *glui_get_style(Glui *glui, char *class);
+void       glui_abs_bounds(Glui *glui, Vec4 bounds);
 
 bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
 void glui_begin_list_id(Glui *glui, char *file_name, u32 line,

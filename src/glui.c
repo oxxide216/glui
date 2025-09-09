@@ -33,7 +33,8 @@ Glui glui_init(WinxWindow *window) {
 }
 
 static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
-  root_widget->bounds = bounds;
+  if (!root_widget->are_bounds_abs)
+    root_widget->bounds = bounds;
 
   if (root_widget->kind != GluiWidgetKindList)
     return;
@@ -100,6 +101,11 @@ GluiStyle *glui_get_style(Glui *glui, char *class) {
   return glui->styles.items + glui->styles.len - 1;
 }
 
+void glui_abs_bounds(Glui *glui, Vec4 bounds) {
+  glui->current_abs_bounds = bounds;
+  glui->are_bounds_abs = true;
+}
+
 static WinxEvent glui_get_event_of_kind(Glui *glui, WinxEventKind kind) {
   for (u32 i = 0; i < glui->events.len; ++i) {
     if (glui->events.items[i].kind == kind) {
@@ -154,8 +160,12 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
 
   widget->kind = GluiWidgetKindButton;
   widget->style = *glui_get_style(glui, class);
+  widget->bounds = glui->current_abs_bounds;
+  widget->are_bounds_abs = glui->are_bounds_abs;
 
   widget->as.button.text = text;
+
+  glui->are_bounds_abs = false;
 
   WinxEvent event = glui_get_event_of_kind(glui, WinxEventKindButtonPress);
   if (event.kind == WinxEventKindButtonPress) {
@@ -188,11 +198,14 @@ void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
 
   widget->kind = GluiWidgetKindList;
   widget->style = *glui_get_style(glui, class);
+  widget->bounds = glui->current_abs_bounds;
+  widget->are_bounds_abs = glui->are_bounds_abs;
   widget->parent = glui->current_list;
 
   widget->as.list.kind = kind;
   widget->as.list.margin = margin;
 
+  glui->are_bounds_abs = false;
   glui->current_list = widget;
 }
 

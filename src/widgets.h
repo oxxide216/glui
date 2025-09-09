@@ -63,6 +63,7 @@ struct GluiWidget {
   GluiWidgetId    id;
   GluiStyle       style;
   Vec4            bounds;
+  bool            are_bounds_abs;
   GluiWidget     *parent;
 };
 

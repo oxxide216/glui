@@ -42,6 +42,9 @@ void render_ui(Glui *glui) {
   glui_button(glui, STR_LIT("Click me!"), "button");
   glui_button(glui, STR_LIT("Click me!"), "button");
   glui_button(glui, STR_LIT("Click me!"), "button");
+
+  glui_abs_bounds(glui, vec4(20.0, 20.0, 50.0, 50.0));
+  glui_button(glui, STR_LIT("Click me!"), "block");
 }
 
 int main(void) {
