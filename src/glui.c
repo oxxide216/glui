@@ -160,8 +160,9 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
 
   widget->kind = GluiWidgetKindButton;
   widget->style = *glui_get_style(glui, class);
-  widget->bounds = glui->current_abs_bounds;
   widget->are_bounds_abs = glui->are_bounds_abs;
+  if (widget->are_bounds_abs)
+    widget->bounds = glui->current_abs_bounds;
 
   widget->as.button.text = text;
 
@@ -198,8 +199,9 @@ void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
 
   widget->kind = GluiWidgetKindList;
   widget->style = *glui_get_style(glui, class);
-  widget->bounds = glui->current_abs_bounds;
   widget->are_bounds_abs = glui->are_bounds_abs;
+  if (widget->are_bounds_abs)
+    widget->bounds = glui->current_abs_bounds;
   widget->parent = glui->current_list;
 
   widget->as.list.kind = kind;
