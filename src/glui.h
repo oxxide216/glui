@@ -9,13 +9,11 @@
 #include "widgets.h"
 #include "renderer.h"
 
-#define glui_button(glui, text, size, class)                  \
-  glui_button_id(glui, __FILE__, __LINE__, text, size, class)
+#define glui_button(glui, text, class)                  \
+  glui_button_id(glui, __FILE__, __LINE__, text, class)
 
-#define glui_begin_list(glui, margin, anchor, fill_x,          \
-                        fill_y, size, class)                   \
-  glui_begin_list_id(glui, __FILE__, __LINE__, margin, anchor, \
-                     fill_x, fill_y, size, class)
+#define glui_begin_list(glui, kind, margin, class)                  \
+  glui_begin_list_id(glui, __FILE__, __LINE__, kind, margin, class)
 
 typedef Da(WinxEvent) GluiEvents;
 
@@ -35,9 +33,9 @@ void      glui_next_frame(Glui *glui);
 
 GluiStyle *glui_get_style(Glui *glui, char *class);
 
-bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, Vec4 bounds, char *class);
-void glui_begin_list_id(Glui *glui, char *file_name, u32 line, Vec2 margin, GluiAnchor anchor,
-                        bool fill_x, bool fill_y, Vec4 bounds, char *class);
+bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
+                        GluiListKind kind, Vec2 margin, char *class);
 void glui_end_list(Glui *glui);
 
 #endif // GLUI_H

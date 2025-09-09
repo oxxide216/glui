@@ -18,20 +18,15 @@ typedef struct GluiWidget GluiWidget;
 typedef Da(GluiWidget *) GluiWidgets;
 
 typedef enum {
-  GluiAnchorTopLeft = 0,
-  GluiAnchorTopRight,
-  GluiAnchorBottomLeft,
-  GluiAnchorBottomRight,
-} GluiAnchor;
+  GluiListKindVertical = 0,
+  GluiListKindHorizontal,
+} GluiListKind;
 
 typedef struct {
-  GluiWidgets children;
-  Vec2        margin;
-  Vec2        free_space_pos;
-  Vec2        free_space_size;
-  GluiAnchor  anchor;
-  bool        fill_x;
-  bool        fill_y;
+  GluiListKind kind;
+  GluiWidgets  children;
+  Vec2         margin;
+  f32          fixed_width;
 } GluiWidgetList;
 
 typedef union {

@@ -23,27 +23,23 @@ bool process_event(WinxEvent *event) {
 }
 
 void setup_styles(Glui *glui) {
-  glui_get_style(glui, "block")->bg_color = TGRAY;
+  glui_get_style(glui, "root")->bg_color = TGRAY;
+  glui_get_style(glui, "block")->bg_color = WHITE;
   glui_get_style(glui, "button")->bg_color = RED;
 }
 
 void render_ui(Glui *glui) {
-  Vec4 bounds = vec4(0.0, 0.0, glui->size.x, glui->size.y);
-  glui_begin_list(glui, vec2(30.0, 30.0),
-                  GluiAnchorTopLeft, false,
-                  false, bounds, "block");
-
-  bool clicked0 = glui_button(glui, STR_LIT("Click me!"),
-                             vec4(0.0, 0.0, 100.0, 100.0), "button");
+  bool clicked0 = glui_button(glui, STR_LIT("Click me!"), "button");
   if (clicked0)
     INFO("Button 0 was clicked!\n");
 
-  bool clicked1 = glui_button(glui, STR_LIT("Click me!"),
-                             vec4(0.0, 0.0, 100.0, 100.0), "button");
+  bool clicked1 = glui_button(glui, STR_LIT("Click me!"), "button");
   if (clicked1)
     INFO("Button 1 was clicked!\n");
 
-  glui_end_list(glui);
+  glui_button(glui, STR_LIT("Click me!"), "button");
+  glui_button(glui, STR_LIT("Click me!"), "button");
+  glui_button(glui, STR_LIT("Click me!"), "button");
 }
 
 int main(void) {
