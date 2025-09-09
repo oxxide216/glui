@@ -42,7 +42,60 @@ GluiRenderer glui_init_renderer(Vec2 size) {
   return renderer;
 }
 
-static void glui_redraw(GluiRenderer *renderer) {
+static bool glui_vec4_eq(Vec4 *a, Vec4 *b) {
+  return a->x == b->x && a->y == b->y &&
+         a->z == b->z && a->w == b->w;
+}
+
+static bool glui_primitive_eq(GluiPrimitive *a, GluiPrimitive *b) {
+  if (a->kind != b->kind)
+    return false;
+
+  if (!glui_vec4_eq(&a->bounds, &b->bounds))
+    return false;
+
+  if (!glui_vec4_eq(&a->color, &b->color))
+    return false;
+
+  return true;
+}
+
+static void glui_push_primitive(GluiRenderer *renderer, GluiPrimitiveKind kind,
+                                Vec4 bounds, Vec4 color) {
+  GluiPrimitive primitive = { kind, bounds, color };
+
+  if (renderer->primitives.len >= renderer->prev_primitives.len) {
+    renderer->redraw = true;
+  } else {
+    GluiPrimitive *prev_primitive = renderer->prev_primitives.items +
+                                    renderer->primitives.len;
+    if (!glui_primitive_eq(prev_primitive, &primitive))
+      renderer->redraw = true;
+  }
+
+  DA_APPEND(renderer->primitives, primitive);
+}
+
+static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widget) {
+  switch (widget->kind) {
+  case GluiWidgetKindButton: {
+    glui_push_primitive(renderer, GluiPrimitiveKindQuad,
+                        widget->bounds, widget->style.bg_color);
+  } break;
+
+  case GluiWidgetKindList: {
+    glui_push_primitive(renderer, GluiPrimitiveKindQuad,
+                        widget->bounds, widget->style.bg_color);
+  } break;
+  }
+
+  if (widget->kind == GluiWidgetKindList) {
+    for (u32 i = 0; i < widget->as.list.children.len; ++i)
+      glui_gen_widget_primitives(renderer, widget->as.list.children.items[i]);
+  }
+}
+
+static void glui_rerender(GluiRenderer *renderer) {
   GluiGeneralVertices general_vertices = {0};
   GluiIndices general_indices = {0};
 
@@ -73,54 +126,15 @@ static void glui_redraw(GluiRenderer *renderer) {
   glass_set_param_2f(&renderer->general_shader, "u_resolution", renderer->size);
 }
 
-void glui_render(GluiRenderer *renderer) {
+void glui_render(GluiRenderer *renderer, GluiWidget *root_widget) {
+  renderer->primitives.len = 0;
+  glui_gen_widget_primitives(renderer, root_widget);
+
   if (renderer->redraw) {
+    glui_rerender(renderer);
+
     renderer->redraw = false;
-
-    glui_redraw(renderer);
   }
-
-  if (renderer->prev_primitives.items)
-    free(renderer->prev_primitives.items);
-
-  renderer->prev_primitives = renderer->primitives;
-  renderer->primitives = (GluiPrimitives) {0};
 
   glass_render_object(&renderer->general_object);
-}
-
-static bool glui_vec4_eq(Vec4 *a, Vec4 *b) {
-  return a->x == b->x && a->y == b->y &&
-         a->z == b->z && a->w == b->w;
-}
-
-static bool glui_primitive_eq(GluiPrimitive *a, GluiPrimitive *b) {
-  if (a->kind != b->kind)
-    return false;
-
-  if (!glui_vec4_eq(&a->bounds, &b->bounds))
-    return false;
-
-  if (!glui_vec4_eq(&a->color, &b->color))
-    return false;
-
-  return true;
-}
-
-static void glui_push_primitive(GluiRenderer *renderer, GluiPrimitive primitive) {
-  if (renderer->primitives.len >= renderer->prev_primitives.len) {
-    renderer->redraw = true;
-  } else {
-    GluiPrimitive *prev_primitive = renderer->prev_primitives.items +
-                                    renderer->primitives.len;
-    if (!glui_primitive_eq(prev_primitive, &primitive))
-      renderer->redraw = true;
-  }
-
-  DA_APPEND(renderer->primitives, primitive);
-}
-
-void glui_push_quad(GluiRenderer *renderer, Vec4 bounds, Vec4 color) {
-  GluiPrimitive quad = { GluiPrimitiveKindQuad, bounds, color };
-  glui_push_primitive(renderer, quad);
 }

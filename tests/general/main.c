@@ -5,9 +5,9 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define WHITE    vec4(1.0, 1.0, 1.0, 1.0)
-#define TGRAY    vec4(0.2, 0.2, 0.2, 0.5)
-#define RED      vec4(1.0, 0.0, 0.0, 1.0)
+#define WHITE vec4(1.0, 1.0, 1.0, 1.0)
+#define TGRAY vec4(0.2, 0.2, 0.2, 0.5)
+#define RED   vec4(1.0, 0.0, 0.0, 1.0)
 
 bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
@@ -28,21 +28,22 @@ void setup_styles(Glui *glui) {
 }
 
 void render_ui(Glui *glui) {
-  glui_begin_block(glui, vec2(30.0, 30.0), GluiAnchorXLeft,
-                   GluiAnchorYTop, false, false,
-                   glui->size, "block");
+  Vec4 bounds = vec4(0.0, 0.0, glui->size.x, glui->size.y);
+  glui_begin_list(glui, vec2(30.0, 30.0),
+                  GluiAnchorTopLeft, false,
+                  false, bounds, "block");
 
   bool clicked0 = glui_button(glui, STR_LIT("Click me!"),
-                             vec2(100.0, 100.0), "button");
+                             vec4(0.0, 0.0, 100.0, 100.0), "button");
   if (clicked0)
     INFO("Button 0 was clicked!\n");
 
   bool clicked1 = glui_button(glui, STR_LIT("Click me!"),
-                             vec2(100.0, 100.0), "button");
+                             vec4(0.0, 0.0, 100.0, 100.0), "button");
   if (clicked1)
     INFO("Button 1 was clicked!\n");
 
-  glui_end_block(glui);
+  glui_end_list(glui);
 }
 
 int main(void) {

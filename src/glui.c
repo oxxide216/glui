@@ -1,5 +1,24 @@
 #include "glui.h"
 #include "winx/src/event.h"
+#include "widgets.h"
+#define SHL_ARENA_IMPLEMENTATION
+#include "shl_arena.h"
+
+static void glui_init_root_list(Glui *glui) {
+  glui->root_widget = aalloc(sizeof(GluiWidget));
+  glui->current_list = glui->root_widget;
+
+  glui->current_list->kind = GluiWidgetKindList;
+  glui->current_list->id = (GluiWidgetId) { __FILE__, __LINE__ };
+  glui->current_list->style = *glui_get_style(glui, "root");
+  glui->current_list->bounds = vec4(0.0, 0.0, glui->size.x, glui->size.y);
+  glui->current_list->parent = NULL;
+
+  glui->current_list->as.list.margin = vec2(0.0, 0.0);
+  glui->current_list->as.list.anchor = GluiAnchorTopLeft;
+  glui->current_list->as.list.fill_x = false;
+  glui->current_list->as.list.fill_y = false;
+}
 
 Glui glui_init(WinxWindow *window) {
   Glui glui = {0};
@@ -8,26 +27,46 @@ Glui glui_init(WinxWindow *window) {
 
   glui.size = size;
   glui.renderer = glui_init_renderer(size);
-  glui.layout = glui_init_layout(size);
   glui.window = window;
+
+  glui_init_root_list(&glui);
 
   return glui;
 }
 
+static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
+  root_widget->bounds = bounds;
+
+  if (root_widget->kind != GluiWidgetKindList)
+    return;
+
+  Vec4 free_space = vec4(root_widget->bounds.x + root_widget->as.list.margin.x,
+                         root_widget->bounds.y + root_widget->as.list.margin.y,
+                         root_widget->bounds.z - root_widget->as.list.margin.x * 2.0,
+                         root_widget->bounds.w - root_widget->as.list.margin.y * 2.0);
+
+  for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
+    glui_compute_bounds(root_widget->as.list.children.items[i], free_space);
+  }
+}
+
 void glui_next_frame(Glui *glui) {
-  glui_render(&glui->renderer);
+  glui->current_list = glui->root_widget;
+  glui->current_list->style = *glui_get_style(glui, "root");
+
+  Vec4 root_widget_bounds = vec4(0.0, 0.0, glui->size.x, glui->size.y);
+  glui_compute_bounds(glui->root_widget, root_widget_bounds);
+  glui_render(&glui->renderer, glui->root_widget);
 
   if (glui->renderer.size.x != (f32) glui->window->width) {
     glui->size.x = (f32) glui->window->width;
     glui->renderer.size.x = (f32) glui->window->width;
-    glui->layout.size.x = (f32) glui->window->width;
     glui->renderer.redraw = true;
   }
 
   if (glui->renderer.size.y != (f32) glui->window->height) {
     glui->size.y = (f32) glui->window->height;
     glui->renderer.size.y = (f32) glui->window->height;
-    glui->layout.size.y = (f32) glui->window->height;
     glui->renderer.redraw = true;
   }
 
@@ -52,47 +91,98 @@ GluiStyle *glui_get_style(Glui *glui, char *class) {
 static WinxEvent glui_get_event_of_kind(Glui *glui, WinxEventKind kind) {
   for (u32 i = 0; i < glui->events.len; ++i) {
     if (glui->events.items[i].kind == kind) {
-      WinxEvent event = glui->events.items[i];
-      return event;
+      return glui->events.items[i];
     }
   }
 
   return (WinxEvent) { WinxEventKindNone, {} };
 }
 
-bool glui_button(Glui *glui, Str text, Vec2 size, char *class) {
-  Vec4 bounds = glui_compute_bounds(&glui->layout, size);
-  GluiStyle *style = glui_get_style(glui, class);
+static GluiWidget *glui_get_widget_rec(GluiWidget *root_widget, char *file_name, u32 line) {
+  if (strcmp(root_widget->id.file_name, file_name) == 0 &&
+      root_widget->id.line == line)
+    return root_widget;
 
-  glui_push_quad(&glui->renderer, bounds, style->bg_color);
+  if (root_widget->kind != GluiWidgetKindList)
+    return NULL;
 
+  for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
+    GluiWidget *child = root_widget->as.list.children.items[i];
+    GluiWidget *widget = glui_get_widget_rec(child, file_name, line);
+    if (widget)
+      return widget;
+  }
+
+  return NULL;
+}
+
+static GluiWidget *glui_get_widget(GluiWidget *root_widget,
+                                   GluiWidget *current_list,
+                                   char *file_name, u32 line) {
+  GluiWidget *widget = glui_get_widget_rec(root_widget, file_name, line);
+  if (widget)
+    return widget;
+
+  widget = aalloc(sizeof(GluiWidget));
+  *widget = (GluiWidget) {0};
+  widget->id.file_name = file_name;
+  widget->id.line = line;
+
+  DA_APPEND(current_list->as.list.children, widget);
+
+  return widget;
+}
+
+bool glui_button_id(Glui *glui, char *file_name, u32 line,
+                    Str text, Vec4 bounds, char *class) {
   (void) text;
 
+  GluiWidget *widget = glui_get_widget(glui->root_widget, glui->current_list, file_name, line);
+  if (widget->kind != GluiWidgetKindButton)
+    return false;
+
+  widget->kind = GluiWidgetKindButton;
+  widget->style = *glui_get_style(glui, class);
+  widget->bounds = bounds;
+
+  widget->as.button.text = text;
+
   WinxEvent event = glui_get_event_of_kind(glui, WinxEventKindButtonPress);
-  if (event.kind == WinxEventKindNone)
-    return false;
+  if (event.kind == WinxEventKindButtonPress) {
+    f32 x = (f32) event.as.button_press.x;
+    f32 y = (f32) event.as.button_press.y;
 
-  f32 x = (f32) event.as.button_press.x;
-  f32 y = (f32) event.as.button_press.y;
+    if (x >= bounds.x && x <= bounds.x + bounds.z &&
+        y >= bounds.y && y <= bounds.y + bounds.w)
+      widget->as.button.pressed = true;
+  } else if (widget->as.button.pressed) {
+    event = glui_get_event_of_kind(glui, WinxEventKindButtonRelease);
+    if (event.kind == WinxEventKindButtonRelease)
+      widget->as.button.pressed = false;
+  }
 
-  if (x < bounds.x || x > bounds.x + bounds.z ||
-      y < bounds.y || y > bounds.y + bounds.w)
-    return false;
-
-  return true;
+  return widget->as.button.pressed;
 }
 
-void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchorX anchor_x,
-                      GluiAnchorY anchor_y, bool fill_x, bool fill_y,
-                      Vec2 size, char *class) {
-  Vec4 bounds = glui_compute_bounds(&glui->layout, size);
-  GluiStyle *style = glui_get_style(glui, class);
+void glui_begin_list_id(Glui *glui, char *file_name, u32 line, Vec2 margin,
+                        GluiAnchor anchor, bool fill_x, bool fill_y, Vec4 bounds,
+                        char *class) {
+  GluiWidget *widget = glui_get_widget(glui->root_widget, glui->current_list, file_name, line);
 
-  glui_push_quad(&glui->renderer, bounds, style->bg_color);
-  glui_push_block(&glui->layout, bounds, margin, anchor_x,
-                  anchor_y, fill_x, fill_y);
+  widget->kind = GluiWidgetKindList;
+  widget->style = *glui_get_style(glui, class);
+  widget->bounds = bounds;
+  widget->parent = glui->current_list;
+
+  widget->as.list.margin = margin;
+  widget->as.list.anchor = anchor;
+  widget->as.list.fill_x = fill_x;
+  widget->as.list.fill_y = fill_y;
+
+  glui->current_list = widget;
 }
 
-void glui_end_block(Glui *glui) {
-  glui_pop_block(&glui->layout);
+void glui_end_list(Glui *glui) {
+  if (glui->current_list != glui->root_widget)
+    glui->current_list = glui->current_list->parent;
 }

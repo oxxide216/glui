@@ -6,47 +6,25 @@
 #include "glass/src/math.h"
 #include "shl_str.h"
 #include "shl_defs.h"
+#include "widgets.h"
 #include "renderer.h"
-#include "layout.h"
 
-typedef enum {
-  GluiWidgetKindButton = 0,
-} GluiWidgetKind;
+#define glui_button(glui, text, size, class)                  \
+  glui_button_id(glui, __FILE__, __LINE__, text, size, class)
 
-typedef struct {
-  Str  text;
-  bool pressed;
-} GluiWidgetButton;
-
-typedef union {
-  GluiWidgetButton button;
-} GluiWidgetAs;
-
-typedef struct {
-  char *class;
-  Vec4  bg_color;
-  Vec4  fg_color;
-} GluiStyle;
-
-typedef Da(GluiStyle) GluiStyles;
-
-typedef struct {
-  GluiWidgetKind kind;
-  GluiWidgetAs   as;
-  GluiStyle      style;
-  Vec4           bounds;
-} GluiWidget;
-
-typedef Da(GluiWidget) GluiWidgets;
+#define glui_begin_list(glui, margin, anchor, fill_x,          \
+                        fill_y, size, class)                   \
+  glui_begin_list_id(glui, __FILE__, __LINE__, margin, anchor, \
+                     fill_x, fill_y, size, class)
 
 typedef Da(WinxEvent) GluiEvents;
 
 typedef struct {
   Vec2          size;
+  GluiWidget   *root_widget;
+  GluiWidget   *current_list;
   GluiStyles    styles;
-  GluiWidgets   widgets;
   GluiRenderer  renderer;
-  GluiLayout    layout;
   WinxWindow   *window;
   GluiEvents    events;
 } Glui;
@@ -57,10 +35,9 @@ void      glui_next_frame(Glui *glui);
 
 GluiStyle *glui_get_style(Glui *glui, char *class);
 
-bool glui_button(Glui *glui, Str text, Vec2 size, char *class);
-void glui_begin_block(Glui *glui, Vec2 margin, GluiAnchorX anchor_x,
-                      GluiAnchorY anchor_y, bool fill_x, bool fill_y,
-                      Vec2 size, char *class);
-void glui_end_block(Glui *glui);
+bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, Vec4 bounds, char *class);
+void glui_begin_list_id(Glui *glui, char *file_name, u32 line, Vec2 margin, GluiAnchor anchor,
+                        bool fill_x, bool fill_y, Vec4 bounds, char *class);
+void glui_end_list(Glui *glui);
 
 #endif // GLUI_H

@@ -3,6 +3,7 @@
 
 #include "glass/src/glass.h"
 #include "glass/src/math.h"
+#include "widgets.h"
 
 typedef enum {
   GluiPrimitiveKindQuad = 0,
@@ -18,25 +19,14 @@ typedef Da(GluiPrimitive) GluiPrimitives;
 
 typedef struct {
   Vec2           size;
+  bool           redraw;
   GluiPrimitives primitives;
   GluiPrimitives prev_primitives;
   GlassShader    general_shader;
   GlassObject    general_object;
-  bool           redraw;
 } GluiRenderer;
 
-typedef struct {
-  Vec2 pos;
-  Vec4 color;
-} GluiGeneralVertex;
-
-typedef Da(GluiGeneralVertex) GluiGeneralVertices;
-
-typedef Da(u32) GluiIndices;
-
 GluiRenderer glui_init_renderer(Vec2 size);
-void         glui_render(GluiRenderer *renderer);
-
-void glui_push_quad(GluiRenderer *renderer, Vec4 bounds, Vec4 color);
+void         glui_render(GluiRenderer *renderer, GluiWidget *root_widget);
 
 #endif // GLUI_PRIMITIVES_H
