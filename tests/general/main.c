@@ -5,9 +5,10 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define WHITE vec4(1.0, 1.0, 1.0, 1.0)
-#define TGRAY vec4(0.2, 0.2, 0.2, 0.5)
-#define RED   vec4(1.0, 0.0, 0.0, 1.0)
+#define WHITE    vec4(1.0, 1.0, 1.0, 1.0)
+#define TGRAY    vec4(0.2, 0.2, 0.2, 0.5)
+#define RED      vec4(1.0, 0.0, 0.0, 1.0)
+#define DARK_RED vec4(0.8, 0.0, 0.0, 1.0)
 
 bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
@@ -26,6 +27,7 @@ void setup_styles(Glui *glui) {
   glui_get_style(glui, "root")->bg_color = TGRAY;
   glui_get_style(glui, "block")->bg_color = WHITE;
   glui_get_style(glui, "button")->bg_color = RED;
+  glui_get_style(glui, "button")->alt_bg_color = DARK_RED;
 }
 
 void render_ui(Glui *glui) {

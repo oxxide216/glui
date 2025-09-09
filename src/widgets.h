@@ -26,7 +26,6 @@ typedef struct {
   GluiListKind kind;
   GluiWidgets  children;
   Vec2         margin;
-  f32          fixed_width;
 } GluiWidgetList;
 
 typedef union {
@@ -42,6 +41,7 @@ typedef struct {
 typedef struct {
   char *class;
   Vec4  bg_color;
+  Vec4  alt_bg_color;
   Vec4  fg_color;
 } GluiStyle;
 

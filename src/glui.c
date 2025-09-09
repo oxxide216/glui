@@ -165,13 +165,21 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
     if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
         y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
       widget->as.button.pressed = true;
-  } else if (widget->as.button.pressed) {
+  } else {
     event = glui_get_event_of_kind(glui, WinxEventKindButtonRelease);
-    if (event.kind == WinxEventKindButtonRelease)
+    if (event.kind == WinxEventKindButtonRelease) {
       widget->as.button.pressed = false;
+
+      f32 x = (f32) event.as.button_release.x;
+      f32 y = (f32) event.as.button_release.y;
+
+      if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
+          y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
+        return true;
+    }
   }
 
-  return widget->as.button.pressed;
+  return false;
 }
 
 void glui_begin_list_id(Glui *glui, char *file_name, u32 line,

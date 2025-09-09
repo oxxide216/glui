@@ -79,8 +79,14 @@ static void glui_push_primitive(GluiRenderer *renderer, GluiPrimitiveKind kind,
 static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widget) {
   switch (widget->kind) {
   case GluiWidgetKindButton: {
+    Vec4 color;
+    if (widget->as.button.pressed)
+      color = widget->style.alt_bg_color;
+    else
+      color = widget->style.bg_color;
+
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
-                        widget->bounds, widget->style.bg_color);
+                        widget->bounds, color);
   } break;
 
   case GluiWidgetKindList: {
