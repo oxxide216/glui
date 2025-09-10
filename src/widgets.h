@@ -43,6 +43,7 @@ typedef struct {
   Vec4  bg_color;
   Vec4  alt_bg_color;
   Vec4  fg_color;
+  Vec4  alt_fg_color;
 } GluiStyle;
 
 typedef Da(GluiStyle) GluiStyles;

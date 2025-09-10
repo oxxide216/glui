@@ -29,7 +29,7 @@ typedef struct {
   bool          are_bounds_abs;
 } Glui;
 
-Glui      glui_init(WinxWindow *window);
+Glui      glui_init(WinxWindow *window, char *font_file_path);
 WinxEvent glui_get_event(Glui *glui);
 void      glui_next_frame(Glui *glui);
 

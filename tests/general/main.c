@@ -5,10 +5,11 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define WHITE    vec4(1.0, 1.0, 1.0, 1.0)
-#define TGRAY    vec4(0.2, 0.2, 0.2, 0.5)
-#define RED      vec4(1.0, 0.0, 0.0, 1.0)
-#define DARK_RED vec4(0.8, 0.0, 0.0, 1.0)
+#define MAIN_BG_COLOR    vec4(0.0, 0.0, 0.0, 1.0)
+#define BUTTON_COLOR     vec4(0.16, 0.16, 0.16, 1.0)
+#define BUTTON_ALT_COLOR vec4(0.1, 0.1, 0.1, 1.0)
+#define TEXT_COLOR       vec4(0.66, 0.7, 0.7, 1.0)
+#define TEXT_ALT_COLOR   vec4(0.26, 0.25, 0.3, 1.0)
 
 bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
@@ -24,17 +25,19 @@ bool process_event(WinxEvent *event) {
 }
 
 void setup_styles(Glui *glui) {
-  glui_get_style(glui, "root")->bg_color = TGRAY;
-  glui_get_style(glui, "block")->bg_color = WHITE;
-  glui_get_style(glui, "button")->bg_color = RED;
-  glui_get_style(glui, "button")->alt_bg_color = DARK_RED;
+  glui_get_style(glui, "root")->bg_color = MAIN_BG_COLOR;
+  glui_get_style(glui, "block")->bg_color = MAIN_BG_COLOR;
+  glui_get_style(glui, "button")->bg_color = BUTTON_COLOR;
+  glui_get_style(glui, "button")->alt_bg_color = BUTTON_ALT_COLOR;
+  glui_get_style(glui, "button")->fg_color = TEXT_COLOR;
+  glui_get_style(glui, "button")->alt_fg_color = TEXT_ALT_COLOR;
 }
 
 void render_ui(Glui *glui) {
-  Vec4 bounds = vec4((glui->size.x - 120.0) / 2.0,
-                     (glui->size.y - 240.0) / 2.0,
-                     120.0,
-                     240.0);
+  Vec4 bounds = vec4((glui->size.x - 160.0) / 2.0,
+                     (glui->size.y - 320.0) / 2.0,
+                     160.0,
+                     320.0);
 
   glui_abs_bounds(glui, bounds);
   glui_begin_list(glui, GluiListKindVertical, vec2(20.0, 20.0), "block");
@@ -60,7 +63,7 @@ int main(void) {
                                        640, 480, WinxGraphicsModeOpenGL,
                                        NULL);
   glass_init();
-  Glui glui = glui_init(&window);
+  Glui glui = glui_init(&window, "tests/general/Hack-Regular.ttf");
   setup_styles(&glui);
 
   bool is_running = true;

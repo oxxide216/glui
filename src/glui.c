@@ -18,13 +18,13 @@ static void glui_init_root_list(Glui *glui) {
   glui->current_list->as.list.margin = vec2(20.0, 20.0);
 }
 
-Glui glui_init(WinxWindow *window) {
+Glui glui_init(WinxWindow *window, char *font_file_path) {
   Glui glui = {0};
 
   Vec2 size = vec2((f32) window->width, (f32) window->height);
 
   glui.size = size;
-  glui.renderer = glui_init_renderer(size);
+  glui.renderer = glui_init_renderer(size, font_file_path);
   glui.window = window;
 
   glui_init_root_list(&glui);
@@ -176,7 +176,7 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
     if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
         y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
       widget->as.button.pressed = true;
-  } else {
+  } else if (widget->as.button.pressed) {
     event = glui_get_event_of_kind(glui, WinxEventKindButtonRelease);
     if (event.kind == WinxEventKindButtonRelease) {
       widget->as.button.pressed = false;
