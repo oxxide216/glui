@@ -154,7 +154,9 @@ static GluiWidget *glui_get_widget(GluiWidget *root_widget,
 bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class) {
   (void) text;
 
-  GluiWidget *widget = glui_get_widget(glui->root_widget, glui->current_list, file_name, line);
+  GluiWidget *widget = glui_get_widget(glui->root_widget,
+                                       glui->current_list,
+                                       file_name, line);
   if (widget->kind != GluiWidgetKindButton)
     return false;
 
@@ -163,6 +165,7 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
   widget->are_bounds_abs = glui->are_bounds_abs;
   if (widget->are_bounds_abs)
     widget->bounds = glui->current_abs_bounds;
+  widget->parent = glui->current_list;
 
   widget->as.button.text = text;
 
@@ -195,7 +198,9 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
 
 void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
                         GluiListKind kind, Vec2 margin, char *class) {
-  GluiWidget *widget = glui_get_widget(glui->root_widget, glui->current_list, file_name, line);
+  GluiWidget *widget = glui_get_widget(glui->root_widget,
+                                       glui->current_list,
+                                       file_name, line);
 
   widget->kind = GluiWidgetKindList;
   widget->style = *glui_get_style(glui, class);
@@ -214,4 +219,22 @@ void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
 void glui_end_list(Glui *glui) {
   if (glui->current_list != glui->root_widget)
     glui->current_list = glui->current_list->parent;
+}
+
+void glui_text_id(Glui *glui, char *file_name,
+                  u32 line, Str text, char *class) {
+  GluiWidget *widget = glui_get_widget(glui->root_widget,
+                                       glui->current_list,
+                                       file_name, line);
+
+  widget->kind = GluiWidgetKindText;
+  widget->style = *glui_get_style(glui, class);
+  widget->are_bounds_abs = glui->are_bounds_abs;
+  if (widget->are_bounds_abs)
+    widget->bounds = glui->current_abs_bounds;
+  widget->parent = glui->current_list;
+
+  widget->as.text.text = text;
+
+  glui->are_bounds_abs = false;
 }

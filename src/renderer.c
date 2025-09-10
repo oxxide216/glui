@@ -3,7 +3,8 @@
 #include "vertices.h"
 #include "shl_log.h"
 
-#define TEXT_SCALE 0.01
+#define TEXT_SCALE          0.01
+#define MAGIC_TEXT_Y_OFFSET 17.5
 
 static Str general_vertex_src = STR_LIT(
   "#version 330 core\n"
@@ -141,6 +142,8 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_scale) {
   u32 advance = renderer->face->glyph->advance.x * text_scale;
   UVec2 size = uvec2(renderer->face->glyph->bitmap.width * text_scale,
                      renderer->face->glyph->bitmap.rows * text_scale);
+  UVec2 bearing = uvec2(renderer->face->glyph->bitmap_left * text_scale,
+                        renderer->face->glyph->bitmap_top * text_scale);
 
   GlassObject object = glass_init_object(&renderer->texture_shader);
 
@@ -151,10 +154,49 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_scale) {
                      GlassPixelKindSingleColor,
                      GlassTextureFilteringModeLinear);
 
-  GluiGlyph new_glyph = { _char, advance, size, object, textures, true };
+  GluiGlyph new_glyph = { _char, advance, size, bearing, object, textures, true };
   DA_APPEND(renderer->glyphs, new_glyph);
 
   return renderer->glyphs.len - 1;
+}
+
+static void glui_gen_text_primitives(GluiRenderer *renderer,
+                                     GluiWidget *widget,
+                                     Str text, Vec4 color) {
+  f32 text_scale = widget->bounds.w * TEXT_SCALE;
+
+  f32 width = 0.0;
+
+  for (u32 i = 0; i < text.len; ++i) {
+    u32 _char = text.ptr[i];
+    u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
+    GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
+
+    if (i + 1 < widget->as.button.text.len)
+      width += glyph->advance >> 6;
+    else
+      width += glyph->size.x;
+  }
+
+  f32 x_offset = (widget->bounds.z - width) / 2.0;
+
+  for (u32 i = 0; i < text.len; ++i) {
+    u32 _char = text.ptr[i];
+    u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
+    GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
+    f32 y_offset = (widget->bounds.w - glyph->size.y - glyph->bearing.y) / 2.0 +
+                   MAGIC_TEXT_Y_OFFSET * text_scale;
+
+    Vec4 bounds = vec4(widget->bounds.x + x_offset,
+                       widget->bounds.y + y_offset,
+                       glyph->size.x,
+                       glyph->size.y);
+
+    glui_push_primitive(renderer, GluiPrimitiveKindTexture,
+                        bounds, color, glyph_index);
+
+    x_offset += glyph->advance >> 6;
+  }
 }
 
 static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widget) {
@@ -172,47 +214,22 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, bg_color, 0);
 
-    f32 text_scale = widget->bounds.w * TEXT_SCALE;
-
-    f32 width = 0.0;
-    for (u32 i = 0; i < widget->as.button.text.len; ++i) {
-      u32 _char = widget->as.button.text.ptr[i];
-      u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
-      GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
-
-      if (i + 1 < widget->as.button.text.len)
-        width += glyph->advance >> 6;
-      else
-        width += glyph->size.x;
-    }
-
-    f32 x_offset = (widget->bounds.z - width) / 2.0;
-    for (u32 i = 0; i < widget->as.button.text.len; ++i) {
-      u32 _char = widget->as.button.text.ptr[i];
-      u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
-      GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
-
-      Vec4 bounds = vec4(widget->bounds.x + x_offset,
-                         widget->bounds.y + (widget->bounds.w - glyph->size.y) / 2.0,
-                         glyph->size.x,
-                         glyph->size.y);
-
-      glui_push_primitive(renderer, GluiPrimitiveKindTexture,
-                          bounds, fg_color, glyph_index);
-
-      x_offset += glyph->advance >> 6;
-    }
+    glui_gen_text_primitives(renderer, widget, widget->as.button.text, fg_color);
   } break;
 
   case GluiWidgetKindList: {
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, widget->style.bg_color, 0);
-  } break;
-  }
 
-  if (widget->kind == GluiWidgetKindList) {
     for (u32 i = 0; i < widget->as.list.children.len; ++i)
       glui_gen_widget_primitives(renderer, widget->as.list.children.items[i]);
+  } break;
+
+  case GluiWidgetKindText: {
+    glui_gen_text_primitives(renderer, widget,
+                             widget->as.text.text,
+                             widget->style.fg_color);
+  } break;
   }
 }
 

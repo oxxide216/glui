@@ -15,6 +15,9 @@
 #define glui_begin_list(glui, kind, margin, class)                  \
   glui_begin_list_id(glui, __FILE__, __LINE__, kind, margin, class)
 
+#define glui_text(glui, text, class)                  \
+  glui_text_id(glui, __FILE__, __LINE__, text, class)
+
 typedef Da(WinxEvent) GluiEvents;
 
 typedef struct {
@@ -40,5 +43,6 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
 void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
                         GluiListKind kind, Vec2 margin, char *class);
 void glui_end_list(Glui *glui);
+void glui_text_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
 
 #endif // GLUI_H

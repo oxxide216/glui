@@ -26,6 +26,7 @@ typedef struct {
   u32           _char;
   u32           advance;
   UVec2         size;
+  UVec2         bearing;
   GlassObject   object;
   GlassTextures textures;
   bool          used;

@@ -31,6 +31,8 @@ void setup_styles(Glui *glui) {
   glui_get_style(glui, "button")->alt_bg_color = BUTTON_ALT_COLOR;
   glui_get_style(glui, "button")->fg_color = TEXT_COLOR;
   glui_get_style(glui, "button")->alt_fg_color = TEXT_ALT_COLOR;
+
+  glui_get_style(glui, "text")->fg_color = TEXT_COLOR;
 }
 
 void render_ui(Glui *glui) {
@@ -41,6 +43,8 @@ void render_ui(Glui *glui) {
 
   glui_abs_bounds(glui, bounds);
   glui_begin_list(glui, GluiListKindVertical, vec2(20.0, 20.0), "block");
+
+  glui_text(glui, STR_LIT("Some text"), "text");
 
   bool clicked0 = glui_button(glui, STR_LIT("Click me!"), "button");
   if (clicked0)
@@ -74,7 +78,6 @@ int main(void) {
         break;
     }
 
-    glass_clear_screen(0.0, 0.0, 0.0, 0.0);
     render_ui(&glui);
     glui_next_frame(&glui);
     winx_draw(&window);

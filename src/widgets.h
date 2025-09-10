@@ -6,6 +6,7 @@
 typedef enum {
   GluiWidgetKindButton = 0,
   GluiWidgetKindList,
+  GluiWidgetKindText,
 } GluiWidgetKind;
 
 typedef struct {
@@ -28,9 +29,14 @@ typedef struct {
   Vec2         margin;
 } GluiWidgetList;
 
+typedef struct {
+  Str  text;
+} GluiWidgetText;
+
 typedef union {
   GluiWidgetButton button;
   GluiWidgetList   list;
+  GluiWidgetText   text;
 } GluiWidgetAs;
 
 typedef struct {
