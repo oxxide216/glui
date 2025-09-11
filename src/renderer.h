@@ -24,6 +24,7 @@ typedef Da(GluiPrimitive) GluiPrimitives;
 
 typedef struct {
   u32           _char;
+  f32           text_size;
   u32           advance;
   UVec2         size;
   UVec2         bearing;

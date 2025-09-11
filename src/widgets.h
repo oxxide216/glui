@@ -34,9 +34,9 @@ typedef struct {
 } GluiWidgetText;
 
 typedef union {
-  GluiWidgetButton button;
-  GluiWidgetList   list;
-  GluiWidgetText   text;
+  GluiWidgetButton     button;
+  GluiWidgetList       list;
+  GluiWidgetText       text;
 } GluiWidgetAs;
 
 typedef struct {

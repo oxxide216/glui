@@ -1,10 +1,13 @@
+#include <math.h>
+
 #include "renderer.h"
 #include "glass/src/params.h"
 #include "vertices.h"
 #include "shl_log.h"
 
-#define TEXT_SCALE          0.01
-#define MAGIC_TEXT_Y_OFFSET 17.5
+#define TEXT_QUALITY_MULTIPLIER 2
+#define TEXT_SIZE_MULTIPLIER    0.6
+#define TEXT_Y_OFFSET           0.3
 
 static Str general_vertex_src = STR_LIT(
   "#version 330 core\n"
@@ -87,8 +90,6 @@ GluiRenderer glui_init_renderer(Vec2 size, char *font_file_path) {
     exit(1);
   }
 
-  FT_Set_Pixel_Sizes(renderer.face, 0, 48);
-
   return renderer;
 }
 
@@ -126,24 +127,26 @@ static void glui_push_primitive(GluiRenderer *renderer, GluiPrimitiveKind kind,
   DA_APPEND(renderer->primitives, primitive);
 }
 
-static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_scale) {
+static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
   for (u32 i = 0; i < renderer->glyphs.len; ++i) {
     GluiGlyph *glyph = renderer->glyphs.items + i;
 
     if (glyph->_char == _char &&
+        fabs(glyph->text_size - text_size) < 0.00001 &&
         !glyph->used) {
       glyph->used = true;
       return i;
     }
   }
 
+  FT_Set_Pixel_Sizes(renderer->face, 0, text_size * TEXT_QUALITY_MULTIPLIER);
   FT_Load_Char(renderer->face, _char, FT_LOAD_RENDER);
 
-  u32 advance = renderer->face->glyph->advance.x * text_scale;
-  UVec2 size = uvec2(renderer->face->glyph->bitmap.width * text_scale,
-                     renderer->face->glyph->bitmap.rows * text_scale);
-  UVec2 bearing = uvec2(renderer->face->glyph->bitmap_left * text_scale,
-                        renderer->face->glyph->bitmap_top * text_scale);
+  u32 advance = renderer->face->glyph->advance.x / TEXT_QUALITY_MULTIPLIER;
+  UVec2 size = uvec2(renderer->face->glyph->bitmap.width / TEXT_QUALITY_MULTIPLIER,
+                     renderer->face->glyph->bitmap.rows / TEXT_QUALITY_MULTIPLIER);
+  UVec2 bearing = uvec2(renderer->face->glyph->bitmap_left / TEXT_QUALITY_MULTIPLIER,
+                        renderer->face->glyph->bitmap_top / TEXT_QUALITY_MULTIPLIER);
 
   GlassObject object = glass_init_object(&renderer->texture_shader);
 
@@ -154,7 +157,8 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_scale) {
                      GlassPixelKindSingleColor,
                      GlassTextureFilteringModeLinear);
 
-  GluiGlyph new_glyph = { _char, advance, size, bearing, object, textures, true };
+  GluiGlyph new_glyph = { _char, text_size, advance, size,
+                          bearing, object, textures, true };
   DA_APPEND(renderer->glyphs, new_glyph);
 
   return renderer->glyphs.len - 1;
@@ -162,14 +166,16 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_scale) {
 
 static void glui_gen_text_primitives(GluiRenderer *renderer,
                                      GluiWidget *widget,
-                                     Str text, Vec4 color) {
-  f32 text_scale = widget->bounds.w * TEXT_SCALE;
+                                     Str text, Vec4 bounds,
+                                     Vec4 color) {
+  f32 min_side_size = bounds.z < bounds.w ? bounds.z : bounds.w;
+  f32 text_size = min_side_size * TEXT_SIZE_MULTIPLIER;
 
   f32 width = 0.0;
 
   for (u32 i = 0; i < text.len; ++i) {
     u32 _char = text.ptr[i];
-    u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
+    u32 glyph_index = get_glyph_index(renderer, _char, text_size);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
     if (i + 1 < widget->as.button.text.len)
@@ -182,10 +188,10 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
 
   for (u32 i = 0; i < text.len; ++i) {
     u32 _char = text.ptr[i];
-    u32 glyph_index = get_glyph_index(renderer, _char, text_scale);
+    u32 glyph_index = get_glyph_index(renderer, _char, text_size);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
     f32 y_offset = (widget->bounds.w - glyph->size.y - glyph->bearing.y) / 2.0 +
-                   MAGIC_TEXT_Y_OFFSET * text_scale;
+                   TEXT_Y_OFFSET * text_size;
 
     Vec4 bounds = vec4(widget->bounds.x + x_offset,
                        widget->bounds.y + y_offset,
@@ -214,7 +220,9 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, bg_color, 0);
 
-    glui_gen_text_primitives(renderer, widget, widget->as.button.text, fg_color);
+    glui_gen_text_primitives(renderer, widget,
+                             widget->as.button.text,
+                             widget->bounds, fg_color);
   } break;
 
   case GluiWidgetKindList: {
@@ -228,6 +236,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
   case GluiWidgetKindText: {
     glui_gen_text_primitives(renderer, widget,
                              widget->as.text.text,
+                             widget->bounds,
                              widget->style.fg_color);
   } break;
   }
