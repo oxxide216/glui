@@ -17,20 +17,18 @@ typedef struct {
   GluiPrimitiveKind kind;
   Vec4              bounds;
   Vec4              color;
-  u32               glyph_index;
+  Vec4              uv;
 } GluiPrimitive;
 
 typedef Da(GluiPrimitive) GluiPrimitives;
 
 typedef struct {
-  u32           _char;
-  f32           text_size;
-  u32           advance;
-  UVec2         size;
-  UVec2         bearing;
-  GlassObject   object;
-  GlassTextures textures;
-  bool          used;
+  u32  _char;
+  f32  text_size;
+  f32  uv_x_pos;
+  Vec2 size;
+  Vec2 bearing;
+  u32  advance;
 } GluiGlyph;
 
 typedef Da(GluiGlyph) GluiGlyphs;
@@ -44,6 +42,11 @@ typedef struct {
   GlassShader    general_shader;
   GlassObject    general_object;
   GlassShader    texture_shader;
+  GlassObject    texture_object;
+  GlassTexture   glyphs_texture;
+  u32            glyphs_texture_width;
+  u32            glyphs_texture_height;
+  u8            *glyphs_texture_buffer;
   FT_Library     freetype;
   FT_Face        face;
 } GluiRenderer;

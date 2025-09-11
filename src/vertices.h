@@ -27,6 +27,6 @@ void glui_push_quad_vertices(GluiGeneralVertices *vertices,
                              Vec4 color);
 void glui_push_texture_vertices(GluiTextureVertices *vertices,
                                 GluiIndices *indices, Vec4 bounds,
-                                Vec4 color);
+                                Vec4 color, Vec4 uv);
 
 #endif // GLUI_VERTICES_H
