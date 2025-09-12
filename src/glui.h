@@ -8,6 +8,7 @@
 #include "shl_defs.h"
 #include "widgets.h"
 #include "renderer.h"
+#include "text-editor.h"
 
 #define glui_button(glui, text, class)                  \
   glui_button_id(glui, __FILE__, __LINE__, text, class)
@@ -17,6 +18,9 @@
 
 #define glui_text(glui, text, class)                  \
   glui_text_id(glui, __FILE__, __LINE__, text, class)
+
+#define glui_text_editor(glui, class)                  \
+  glui_text_editor_id(glui, __FILE__, __LINE__, class)
 
 typedef Da(WinxEvent) GluiEvents;
 
@@ -39,10 +43,11 @@ void      glui_next_frame(Glui *glui);
 GluiStyle *glui_get_style(Glui *glui, char *class);
 void       glui_abs_bounds(Glui *glui, Vec4 bounds);
 
-bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
-void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
-                        GluiListKind kind, Vec2 margin, char *class);
-void glui_end_list(Glui *glui);
-void glui_text_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+bool            glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+void            glui_begin_list_id(Glui *glui, char *file_name, u32 line,
+                               GluiListKind kind, Vec2 margin, char *class);
+void            glui_end_list(Glui *glui);
+void            glui_text_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line, char *class);
 
 #endif // GLUI_H

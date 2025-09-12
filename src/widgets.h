@@ -2,11 +2,13 @@
 #define GLUI_WIDGETS_H
 
 #include "glass/src/math.h"
+#include "text-editor.h"
 
 typedef enum {
   GluiWidgetKindButton = 0,
   GluiWidgetKindList,
   GluiWidgetKindText,
+  GluiWidgetKindTextEditor,
 } GluiWidgetKind;
 
 typedef struct {
@@ -33,10 +35,15 @@ typedef struct {
   Str  text;
 } GluiWidgetText;
 
+typedef struct {
+  GluiTextEditor editor;
+} GluiWidgetTextEditor;
+
 typedef union {
   GluiWidgetButton     button;
   GluiWidgetList       list;
   GluiWidgetText       text;
+  GluiWidgetTextEditor text_editor;
 } GluiWidgetAs;
 
 typedef struct {
@@ -53,16 +60,6 @@ typedef struct {
 } GluiStyle;
 
 typedef Da(GluiStyle) GluiStyles;
-
-typedef enum {
-  GluiAnchorXLeft = 0,
-  GluiAnchorXRight,
-} GluiAnchorX;
-
-typedef enum {
-  GluiAnchorYTop = 0,
-  GluiAnchorYBottom,
-} GluiAnchorY;
 
 struct GluiWidget {
   GluiWidgetKind  kind;

@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-#include <string.h>
 
 #ifndef SHL_DEFS_DA_ALLOC
 #define SHL_DEFS_DA_ALLOC malloc
@@ -25,9 +24,7 @@
     u32 len, cap; \
   }
 
-#define DA_APPEND(da, element) DA_INSERT(da, element, (da).len - 1)
-
-#define DA_INSERT(da, element, index)                                             \
+#define DA_APPEND(da, element)                                                    \
   do {                                                                            \
     if ((da).cap <= (da).len) {                                                   \
       if ((da).cap != 0) {                                                        \
@@ -39,9 +36,7 @@
         (da).items = SHL_DEFS_DA_ALLOC(sizeof(element));                          \
       }                                                                           \
     }                                                                             \
-    memmove((da).items + index + 1, (da).items + index,                           \
-            ((da).len++ - index) * sizeof(element));                              \
-    (da).items[index] = element;                                                  \
+    (da).items[(da).len++] = element;                                             \
   } while (0)
 
 #define DA_REMOVE(da) (da).items[--(da).len]
@@ -79,7 +74,8 @@
       (ll_end)->next = new;                      \
     else                                         \
       ll = new;                                  \
-    ll_end = new;                                \
+                                      \
+    ll_end = new;                     \
   } while(0)
 
 typedef char           i8;

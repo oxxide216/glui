@@ -4,8 +4,13 @@
 #define SHL_ARENA_IMPLEMENTATION
 #include "shl_arena.h"
 
+#define TEXT_EDITOR_TAB_WIDTH 2
+
+#define EVENT_MASK(event_kind) (1 << (event_kind))
+
 static void glui_init_root_list(Glui *glui) {
   glui->root_widget = aalloc(sizeof(GluiWidget));
+  *glui->root_widget = (GluiWidget) {0};
   glui->current_list = glui->root_widget;
 
   glui->current_list->kind = GluiWidgetKindList;
@@ -15,7 +20,7 @@ static void glui_init_root_list(Glui *glui) {
   glui->current_list->parent = NULL;
 
   glui->current_list->as.list.kind = GluiListKindVertical;
-  glui->current_list->as.list.margin = vec2(20.0, 20.0);
+  glui->current_list->as.list.margin = vec2(0.0, 0.0);
 }
 
 Glui glui_init(WinxWindow *window, char *font_file_path) {
@@ -106,12 +111,10 @@ void glui_abs_bounds(Glui *glui, Vec4 bounds) {
   glui->are_bounds_abs = true;
 }
 
-static WinxEvent glui_get_event_of_kind(Glui *glui, WinxEventKind kind) {
-  for (u32 i = 0; i < glui->events.len; ++i) {
-    if (glui->events.items[i].kind == kind) {
+static WinxEvent glui_get_event_of_kind(Glui *glui, u32 kind_mask) {
+  for (u32 i = 0; i < glui->events.len; ++i)
+    if (EVENT_MASK(glui->events.items[i].kind) & kind_mask)
       return glui->events.items[i];
-    }
-  }
 
   return (WinxEvent) { WinxEventKindNone, {} };
 }
@@ -171,7 +174,7 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
 
   glui->are_bounds_abs = false;
 
-  WinxEvent event = glui_get_event_of_kind(glui, WinxEventKindButtonPress);
+  WinxEvent event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindButtonPress));
   if (event.kind == WinxEventKindButtonPress) {
     f32 x = (f32) event.as.button_press.x;
     f32 y = (f32) event.as.button_press.y;
@@ -180,7 +183,7 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class
         y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
       widget->as.button.pressed = true;
   } else if (widget->as.button.pressed) {
-    event = glui_get_event_of_kind(glui, WinxEventKindButtonRelease);
+    event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindButtonRelease));
     if (event.kind == WinxEventKindButtonRelease) {
       widget->as.button.pressed = false;
 
@@ -237,4 +240,39 @@ void glui_text_id(Glui *glui, char *file_name,
   widget->as.text.text = text;
 
   glui->are_bounds_abs = false;
+}
+
+GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line, char *class) {
+  GluiWidget *widget = glui_get_widget(glui->root_widget,
+                                       glui->current_list,
+                                       file_name, line);
+
+  widget->kind = GluiWidgetKindTextEditor;
+  widget->style = *glui_get_style(glui, class);
+  widget->are_bounds_abs = glui->are_bounds_abs;
+  if (widget->are_bounds_abs)
+    widget->bounds = glui->current_abs_bounds;
+  widget->parent = glui->current_list;
+
+  glui->are_bounds_abs = false;
+
+  WinxEvent event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindKeyPress));
+  if (event.kind == WinxEventKindKeyPress) {
+    if (event.as.key_press.key_code == WinxKeyCodeLeft) {
+      glui_text_editor_move_left(&widget->as.text_editor.editor);
+    } else if (event.as.key_press.key_code == WinxKeyCodeRight) {
+      glui_text_editor_move_right(&widget->as.text_editor.editor);
+    } else if (event.as.key_press.key_code == WinxKeyCodeBackspace) {
+      glui_text_editor_delete_prev(&widget->as.text_editor.editor);
+    } else if (event.as.key_press.key_code == WinxKeyCodeDelete) {
+      glui_text_editor_delete_next(&widget->as.text_editor.editor);
+    } else if (event.as.key_press.key_code == WinxKeyCodeTab) {
+      for (u32 i = 0; i < TEXT_EDITOR_TAB_WIDTH; ++i)
+        glui_text_editor_insert(&widget->as.text_editor.editor, ' ');
+    } else if (event.as.key_press._char) {
+      glui_text_editor_insert(&widget->as.text_editor.editor, event.as.key_press._char);
+    }
+  }
+
+  return &widget->as.text_editor.editor;
 }
