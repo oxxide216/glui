@@ -22,12 +22,12 @@ typedef Da(GluiPrimitive) GluiPrimitives;
 
 typedef struct {
   u32  _char;
-  f32  text_size;
-  f32  uv_x_pos;
-  Vec2 uv_size;
   Vec2 size;
-  u32  advance;
-  u32  bearing_y;
+  Vec2 uv_size;
+  f32  uv_x_pos;
+  f32  text_size;
+  f32  advance;
+  f32  bearing_y;
 } GluiGlyph;
 
 typedef Da(GluiGlyph) GluiGlyphs;
@@ -47,6 +47,7 @@ typedef struct {
   u32             glyphs_texture_height;
   u8             *glyphs_texture_buffer;
   stbtt_fontinfo  font;
+  f32             font_scale;
 } GluiRenderer;
 
 GluiRenderer glui_init_renderer(Vec2 size, char *font_file_path);

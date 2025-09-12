@@ -176,20 +176,20 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
   glui->are_bounds_abs = false;
 
   WinxEvent event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindButtonPress));
-  if (event.kind == WinxEventKindButtonPress) {
-    f32 x = (f32) event.as.button_press.x;
-    f32 y = (f32) event.as.button_press.y;
+  if (event.kind != WinxEventKindNone) {
+    f32 x = (f32) event.as.button.x;
+    f32 y = (f32) event.as.button.y;
 
     if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
         y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
       widget->as.button.pressed = true;
   } else if (widget->as.button.pressed) {
     event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindButtonRelease));
-    if (event.kind == WinxEventKindButtonRelease) {
+    if (event.kind != WinxEventKindNone) {
       widget->as.button.pressed = false;
 
-      f32 x = (f32) event.as.button_release.x;
-      f32 y = (f32) event.as.button_release.y;
+      f32 x = (f32) event.as.button.x;
+      f32 y = (f32) event.as.button.y;
 
       if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
           y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
@@ -260,21 +260,27 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
 
   glui->are_bounds_abs = false;
 
-  WinxEvent event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindKeyPress));
-  if (event.kind == WinxEventKindKeyPress) {
-    if (event.as.key_press.key_code == WinxKeyCodeLeft) {
+  WinxEvent event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindKeyPress) |
+                                                 EVENT_MASK(WinxEventKindKeyHold));
+  if (event.kind != WinxEventKindNone) {
+    WinxKeyCode key_code = event.as.key.key_code;
+    GluiWChar _char = event.as.key._char;
+
+    if (key_code == WinxKeyCodeLeft) {
       glui_text_editor_move_left(&widget->as.text_editor.editor);
-    } else if (event.as.key_press.key_code == WinxKeyCodeRight) {
+    } else if (key_code == WinxKeyCodeRight) {
       glui_text_editor_move_right(&widget->as.text_editor.editor);
-    } else if (event.as.key_press.key_code == WinxKeyCodeBackspace) {
+    } else if (key_code == WinxKeyCodeBackspace) {
       glui_text_editor_delete_prev(&widget->as.text_editor.editor);
-    } else if (event.as.key_press.key_code == WinxKeyCodeDelete) {
+    } else if (key_code == WinxKeyCodeDelete) {
       glui_text_editor_delete_next(&widget->as.text_editor.editor);
-    } else if (event.as.key_press.key_code == WinxKeyCodeTab) {
+    } else if (key_code == WinxKeyCodeTab) {
       for (u32 i = 0; i < TEXT_EDITOR_TAB_WIDTH; ++i)
         glui_text_editor_insert(&widget->as.text_editor.editor, ' ');
-    } else if (event.as.key_press._char) {
-      glui_text_editor_insert(&widget->as.text_editor.editor, event.as.key_press._char);
+    } else if (key_code == WinxKeyCodeEnter) {
+      glui_text_editor_insert(&widget->as.text_editor.editor, '\n');
+    } else if (_char) {
+      glui_text_editor_insert(&widget->as.text_editor.editor, _char);
     }
   }
 

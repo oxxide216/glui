@@ -13,6 +13,7 @@
 #define TEXT_SIZE_MULTIPLIER    0.6
 #define LINE_SPACING            0.0
 #define CHAR_SPACING            0.15
+#define SPACE_ANALOG            'n'
 
 static Str general_vertex_src = STR_LIT(
   "#version 330 core\n"
@@ -149,7 +150,7 @@ static u8 *glui_concat_texture_buffers(u32 *new_width, u32 *new_height,
   return new_buffer;
 }
 
-static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
+static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size, f32 scale) {
   for (u32 i = 0; i < renderer->glyphs.len; ++i) {
     GluiGlyph *glyph = renderer->glyphs.items + i;
 
@@ -157,13 +158,9 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
       return i;
   }
 
-  f32 scale = stbtt_ScaleForPixelHeight(&renderer->font,
-                                        text_size * TEXT_QUALITY_MULTIPLIER);
-
-  i32 width, height, advance, left_side_bearing, x0, y0, x1, y1, ascent, descent, line_gap;
+  i32 width, height, advance, left_side_bearing, yoff;
   stbtt_GetCodepointHMetrics(&renderer->font, _char, &advance, &left_side_bearing);
-  stbtt_GetCodepointBitmapBox(&renderer->font, _char, scale, scale, &x0, &y0, &x1, &y1);
-  stbtt_GetFontVMetrics(&renderer->font, &ascent, &descent, &line_gap);
+  stbtt_GetCodepointBitmapBox(&renderer->font, _char, scale, scale, NULL, &yoff, NULL, NULL);
 
   u8 *bitmap = stbtt_GetCodepointBitmap(&renderer->font, 0, scale, _char,
                                         &width, &height, 0, 0);
@@ -193,16 +190,15 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
                          GlassPixelKindSingleColor);
 
   GluiGlyph new_glyph = {
-    _char, text_size, uv_x_pos, uv_size, size,
-    advance * scale, -y0 * scale };
+    _char, size, uv_size, uv_x_pos,
+    text_size, advance * scale, -yoff };
   DA_APPEND(renderer->glyphs, new_glyph);
 
   return renderer->glyphs.len - 1;
 }
 
-static f32 glui_calculate_x_offset(GluiRenderer *renderer,
-                                   GluiWidget *widget,
-                                   GluiWStr text, f32 text_size) {
+static f32 glui_calculate_text_width(GluiRenderer *renderer, GluiWStr text,
+                                     f32 text_size, f32 scale) {
   f32 max_width = 0.0;
   f32 width = 0.0;
 
@@ -215,16 +211,20 @@ static f32 glui_calculate_x_offset(GluiRenderer *renderer,
       continue;
     }
 
-    u32 glyph_index = get_glyph_index(renderer, _char, text_size);
+    bool is_space = _char == ' ';
+    if (is_space)
+      _char = SPACE_ANALOG;
+
+    u32 glyph_index = get_glyph_index(renderer, _char, text_size, scale);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
-    width += glyph->size.x + CHAR_SPACING * (text_size + (_char == ' '));
+    width += glyph->size.x + CHAR_SPACING * (text_size + is_space);
   }
 
   if (max_width < width)
     max_width = width;
 
-  return (widget->bounds.z - max_width) / 2.0;
+  return max_width;
 }
 
 static void glui_gen_text_primitives(GluiRenderer *renderer,
@@ -233,41 +233,54 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
                                      bool center, Vec4 color) {
   f32 min_side_size = bounds.z < bounds.w ? bounds.z : bounds.w;
   f32 text_size = min_side_size * TEXT_SIZE_MULTIPLIER;
-  f32 base_x_offset = 0.0;
-  if (center)
-    base_x_offset = glui_calculate_x_offset(renderer, widget, text, text_size);
-  f32 x_offset = base_x_offset;
+  f32 scale = stbtt_ScaleForPixelHeight(&renderer->font,
+                                        text_size * TEXT_QUALITY_MULTIPLIER);
   u32 line_index = 0;
+  f32 width = glui_calculate_text_width(renderer, text, text_size, scale);
+
+  i32 ascent, descent;
+  stbtt_GetFontVMetrics(&renderer->font, &ascent, &descent, NULL);
+
+  f32 x_offset = 0.0;
+  if (center)
+    x_offset = (widget->bounds.z - width) / 2.0;
 
   for (u32 i = 0; i < text.len; ++i) {
     u32 _char = text.ptr[i];
     if (_char == '\n') {
-      x_offset = base_x_offset;
+      x_offset = (widget->bounds.z - width) / 2.0;
       ++line_index;
       continue;
     }
 
-    u32 glyph_index = get_glyph_index(renderer, _char, text_size);
+    bool is_space = _char == ' ';
+    if (is_space)
+      _char = SPACE_ANALOG;
+
+    u32 glyph_index = get_glyph_index(renderer, _char, text_size, scale);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
-    f32 y_offset = (line_index + LINE_SPACING) * text_size +
-                   text_size - glyph->size.y;
 
-    Vec4 glyph_bounds = vec4(bounds.x + x_offset,
-                             bounds.y + y_offset,
-                             glyph->size.x,
-                             glyph->size.y);
+    if (!is_space) {
+      f32 y_offset = (line_index + LINE_SPACING) * text_size +
+                     ascent * scale + descent * scale - glyph->bearing_y / 2.0;
 
-    Vec4 uv = vec4(glyph->uv_x_pos / renderer->glyphs_texture_width,
-                   0.0,
-                   (glyph->uv_x_pos + glyph->uv_size.x) /
-                   renderer->glyphs_texture_width,
-                   glyph->uv_size.y /
-                   renderer->glyphs_texture_height);
+      Vec4 glyph_bounds = vec4(bounds.x + x_offset,
+                               bounds.y + y_offset,
+                               glyph->size.x,
+                               glyph->size.y);
 
-    glui_push_primitive(renderer, GluiPrimitiveKindTexture,
-                        glyph_bounds, color, uv);
+      Vec4 uv = vec4(glyph->uv_x_pos / renderer->glyphs_texture_width,
+                     0.0,
+                     (glyph->uv_x_pos + glyph->uv_size.x) /
+                     renderer->glyphs_texture_width,
+                     glyph->uv_size.y /
+                     renderer->glyphs_texture_height);
 
-    x_offset += glyph->size.x + CHAR_SPACING * (text_size + (_char == ' '));
+      glui_push_primitive(renderer, GluiPrimitiveKindTexture,
+                          glyph_bounds, color, uv);
+    }
+
+    x_offset += glyph->size.x + CHAR_SPACING * (text_size + is_space);
   }
 }
 
