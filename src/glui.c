@@ -154,7 +154,8 @@ static GluiWidget *glui_get_widget(GluiWidget *root_widget,
   return widget;
 }
 
-bool glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class) {
+bool glui_button_id(Glui *glui, char *file_name, u32 line,
+                    GluiWStr text, char *class) {
   (void) text;
 
   GluiWidget *widget = glui_get_widget(glui->root_widget,
@@ -225,7 +226,7 @@ void glui_end_list(Glui *glui) {
 }
 
 void glui_text_id(Glui *glui, char *file_name,
-                  u32 line, Str text, char *class) {
+                  u32 line, GluiWStr text, char *class) {
   GluiWidget *widget = glui_get_widget(glui->root_widget,
                                        glui->current_list,
                                        file_name, line);

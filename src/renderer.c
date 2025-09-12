@@ -5,12 +5,14 @@
 #include "vertices.h"
 #include "shl_log.h"
 #include "io.h"
+#include "wstr.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
 #define TEXT_QUALITY_MULTIPLIER 2.0
 #define TEXT_SIZE_MULTIPLIER    0.6
 #define LINE_SPACING            0.0
+#define CHAR_SPACING            0.15
 
 static Str general_vertex_src = STR_LIT(
   "#version 330 core\n"
@@ -158,17 +160,18 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
   f32 scale = stbtt_ScaleForPixelHeight(&renderer->font,
                                         text_size * TEXT_QUALITY_MULTIPLIER);
 
-  i32 width, height, advance, left_side_bearing, x0, y0, x1, y1;
+  i32 width, height, advance, left_side_bearing, x0, y0, x1, y1, ascent, descent, line_gap;
   stbtt_GetCodepointHMetrics(&renderer->font, _char, &advance, &left_side_bearing);
   stbtt_GetCodepointBitmapBox(&renderer->font, _char, scale, scale, &x0, &y0, &x1, &y1);
+  stbtt_GetFontVMetrics(&renderer->font, &ascent, &descent, &line_gap);
 
   u8 *bitmap = stbtt_GetCodepointBitmap(&renderer->font, 0, scale, _char,
                                         &width, &height, 0, 0);
 
+  f32 uv_x_pos = renderer->glyphs_texture_width;
   Vec2 uv_size = vec2(width, height);
   Vec2 size = vec2(width / TEXT_QUALITY_MULTIPLIER,
                    height / TEXT_QUALITY_MULTIPLIER);
-  f32 uv_x_pos = renderer->glyphs_texture_width;
 
   u8 *new_glyphs_texture_buffer =
     glui_concat_texture_buffers(&renderer->glyphs_texture_width,
@@ -199,7 +202,7 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
 
 static f32 glui_calculate_x_offset(GluiRenderer *renderer,
                                    GluiWidget *widget,
-                                   Str text, f32 text_size) {
+                                   GluiWStr text, f32 text_size) {
   f32 max_width = 0.0;
   f32 width = 0.0;
 
@@ -215,10 +218,7 @@ static f32 glui_calculate_x_offset(GluiRenderer *renderer,
     u32 glyph_index = get_glyph_index(renderer, _char, text_size);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
-    if (i + 1 < text.len)
-      width += glyph->advance;
-    else
-      width += glyph->size.x;
+    width += glyph->size.x + CHAR_SPACING * (text_size + (_char == ' '));
   }
 
   if (max_width < width)
@@ -229,7 +229,7 @@ static f32 glui_calculate_x_offset(GluiRenderer *renderer,
 
 static void glui_gen_text_primitives(GluiRenderer *renderer,
                                      GluiWidget *widget,
-                                     Str text, Vec4 bounds,
+                                     GluiWStr text, Vec4 bounds,
                                      bool center, Vec4 color) {
   f32 min_side_size = bounds.z < bounds.w ? bounds.z : bounds.w;
   f32 text_size = min_side_size * TEXT_SIZE_MULTIPLIER;
@@ -249,7 +249,8 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
 
     u32 glyph_index = get_glyph_index(renderer, _char, text_size);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
-    f32 y_offset = glyph->bearing_y + (line_index + LINE_SPACING) * text_size;
+    f32 y_offset = (line_index + LINE_SPACING) * text_size +
+                   text_size - glyph->size.y;
 
     Vec4 glyph_bounds = vec4(bounds.x + x_offset,
                              bounds.y + y_offset,
@@ -266,7 +267,7 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
     glui_push_primitive(renderer, GluiPrimitiveKindTexture,
                         glyph_bounds, color, uv);
 
-    x_offset += glyph->advance;
+    x_offset += glyph->size.x + CHAR_SPACING * (text_size + (_char == ' '));
   }
 }
 
@@ -310,10 +311,10 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, widget->style.bg_color, (Vec4) {0});
 
-    Str text = STR(
-      (char *) widget->as.text_editor.editor.buffer.items,
-      widget->as.text_editor.editor.buffer.len * sizeof(u32)
-    );
+    GluiWStr text = {
+      widget->as.text_editor.editor.buffer.items,
+      widget->as.text_editor.editor.buffer.len,
+    };
 
     Vec4 text_bounds = widget->bounds;
     text_bounds.w = widget->as.text_editor.text_size;

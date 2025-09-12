@@ -43,11 +43,13 @@ void      glui_next_frame(Glui *glui);
 GluiStyle *glui_get_style(Glui *glui, char *class);
 void       glui_abs_bounds(Glui *glui, Vec4 bounds);
 
-bool            glui_button_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+bool            glui_button_id(Glui *glui, char *file_name, u32 line,
+                               GluiWStr text, char *class);
 void            glui_begin_list_id(Glui *glui, char *file_name, u32 line,
                                GluiListKind kind, Vec2 margin, char *class);
 void            glui_end_list(Glui *glui);
-void            glui_text_id(Glui *glui, char *file_name, u32 line, Str text, char *class);
+void            glui_text_id(Glui *glui, char *file_name, u32 line,
+                             GluiWStr text, char *class);
 GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
                                     f32 text_size, char *class);
 

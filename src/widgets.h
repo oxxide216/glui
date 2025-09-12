@@ -3,6 +3,7 @@
 
 #include "glass/src/math.h"
 #include "text-editor.h"
+#include "wstr.h"
 
 typedef enum {
   GluiWidgetKindButton = 0,
@@ -12,8 +13,8 @@ typedef enum {
 } GluiWidgetKind;
 
 typedef struct {
-  Str  text;
-  bool pressed;
+  GluiWStr text;
+  bool     pressed;
 } GluiWidgetButton;
 
 typedef struct GluiWidget GluiWidget;
@@ -32,7 +33,7 @@ typedef struct {
 } GluiWidgetList;
 
 typedef struct {
-  Str  text;
+  GluiWStr text;
 } GluiWidgetText;
 
 typedef struct {

@@ -43,19 +43,19 @@ void render_ui(Glui *glui) {
   glui_abs_bounds(glui, bounds);
   glui_begin_list(glui, GluiListKindVertical, vec2(20.0, 20.0), "block");
 
-  glui_text(glui, STR_LIT("Some text"), "text");
+  glui_text(glui, GLUI_WSTR(L"Some text"), "text");
 
-  bool clicked0 = glui_button(glui, STR_LIT("Click me!"), "button");
+  bool clicked0 = glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
   if (clicked0)
     INFO("Button 0 was clicked!\n");
 
-  bool clicked1 = glui_button(glui, STR_LIT("Click me!"), "button");
+  bool clicked1 = glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
   if (clicked1)
     INFO("Button 1 was clicked!\n");
 
-  glui_button(glui, STR_LIT("Click me!"), "button");
-  glui_button(glui, STR_LIT("Click me!"), "button");
-  glui_button(glui, STR_LIT("Click me!"), "button");
+  glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
+  glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
+  glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
 
   glui_end_list(glui);
 }
