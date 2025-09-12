@@ -49,9 +49,9 @@
 
 #define DA_REMOVE_AT(da, index)                                 \
   do {                                                          \
-    if ((index) + 1 < (da).len) {                               \
+    if ((index) < (da).len) {                                   \
         memmove((da).items + (index), (da).items + (index) + 1, \
-                sizeof(*(da).items) * (da).len);                \
+                ((da).len - (index)) * sizeof(*(da).items));    \
       --(da).len;                                               \
     }                                                           \
   } while (0)
