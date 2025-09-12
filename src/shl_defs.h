@@ -39,16 +39,17 @@
         (da).items = SHL_DEFS_DA_ALLOC(sizeof(element));                          \
       }                                                                           \
     }                                                                             \
-    memmove((da).items + index + 1, (da).items + index,                           \
-            ((da).len++ - index) * sizeof(element));                              \
+    memmove((da).items + (index) + 1, (da).items + (index),                       \
+            ((da).len - (index)) * sizeof(element));                              \
     (da).items[index] = element;                                                  \
+    ++(da).len;                                                                   \
   } while (0)
 
 #define DA_REMOVE(da) (da).items[--(da).len]
 
 #define DA_REMOVE_AT(da, index)                                 \
   do {                                                          \
-    if ((index) < (da).len + 1) {                               \
+    if ((index) + 1 < (da).len) {                               \
         memmove((da).items + (index), (da).items + (index) + 1, \
                 sizeof(*(da).items) * (da).len);                \
       --(da).len;                                               \

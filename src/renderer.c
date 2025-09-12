@@ -241,14 +241,15 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
   i32 ascent, descent;
   stbtt_GetFontVMetrics(&renderer->font, &ascent, &descent, NULL);
 
-  f32 x_offset = 0.0;
+  f32 base_x_offset = 0.0;
   if (center)
-    x_offset = (widget->bounds.z - width) / 2.0;
+    base_x_offset = (widget->bounds.z - width) / 2.0;
+  f32 x_offset = base_x_offset;
 
   for (u32 i = 0; i < text.len; ++i) {
     u32 _char = text.ptr[i];
     if (_char == '\n') {
-      x_offset = (widget->bounds.z - width) / 2.0;
+      x_offset = base_x_offset;
       ++line_index;
       continue;
     }
