@@ -242,7 +242,8 @@ void glui_text_id(Glui *glui, char *file_name,
   glui->are_bounds_abs = false;
 }
 
-GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line, char *class) {
+GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
+                                    f32 text_size, char *class) {
   GluiWidget *widget = glui_get_widget(glui->root_widget,
                                        glui->current_list,
                                        file_name, line);
@@ -253,6 +254,8 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line, char 
   if (widget->are_bounds_abs)
     widget->bounds = glui->current_abs_bounds;
   widget->parent = glui->current_list;
+
+  widget->as.text_editor.text_size = text_size;
 
   glui->are_bounds_abs = false;
 

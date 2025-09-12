@@ -1,7 +1,7 @@
 #!/usr/bin/sh
 
-CFLAGS="-Wall -Wextra -Isrc -Ilibs -Ilibs/winx/src -I/usr/include/freetype2"
-LDFLAGS="-z execstack -lX11 -lGL -lGLEW -lfreetype"
+CFLAGS="-Wall -Wextra -Isrc -Ilibs -Ilibs/winx/src"
+LDFLAGS="-z execstack -lX11 -lGL -lGLEW -lm"
 BUILD_FLAGS="${@:1}"
 SRC="$(find src -name "*.c")"
 WINX_SRC="$(find libs/winx/src -name "*.c")"

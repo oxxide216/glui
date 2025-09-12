@@ -1,12 +1,10 @@
 #ifndef GLUI_PRIMITIVES_H
 #define GLUI_PRIMITIVES_H
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include "glass/src/glass.h"
 #include "glass/src/math.h"
 #include "widgets.h"
+#include "stb_truetype.h"
 
 typedef enum {
   GluiPrimitiveKindQuad = 0,
@@ -26,29 +24,29 @@ typedef struct {
   u32  _char;
   f32  text_size;
   f32  uv_x_pos;
+  Vec2 uv_size;
   Vec2 size;
-  Vec2 bearing;
   u32  advance;
+  u32  bearing_y;
 } GluiGlyph;
 
 typedef Da(GluiGlyph) GluiGlyphs;
 
 typedef struct {
-  Vec2           size;
-  bool           redraw;
-  GluiPrimitives primitives;
-  GluiPrimitives prev_primitives;
-  GluiGlyphs     glyphs;
-  GlassShader    general_shader;
-  GlassObject    general_object;
-  GlassShader    texture_shader;
-  GlassObject    texture_object;
-  GlassTexture   glyphs_texture;
-  u32            glyphs_texture_width;
-  u32            glyphs_texture_height;
-  u8            *glyphs_texture_buffer;
-  FT_Library     freetype;
-  FT_Face        face;
+  Vec2            size;
+  bool            redraw;
+  GluiPrimitives  primitives;
+  GluiPrimitives  prev_primitives;
+  GluiGlyphs      glyphs;
+  GlassShader     general_shader;
+  GlassObject     general_object;
+  GlassShader     texture_shader;
+  GlassObject     texture_object;
+  GlassTexture    glyphs_texture;
+  u32             glyphs_texture_width;
+  u32             glyphs_texture_height;
+  u8             *glyphs_texture_buffer;
+  stbtt_fontinfo  font;
 } GluiRenderer;
 
 GluiRenderer glui_init_renderer(Vec2 size, char *font_file_path);

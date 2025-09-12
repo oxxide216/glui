@@ -37,6 +37,7 @@ typedef struct {
 
 typedef struct {
   GluiTextEditor editor;
+  f32            text_size;
 } GluiWidgetTextEditor;
 
 typedef union {

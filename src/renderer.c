@@ -4,6 +4,9 @@
 #include "glass/src/params.h"
 #include "vertices.h"
 #include "shl_log.h"
+#include "io.h"
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 #define TEXT_QUALITY_MULTIPLIER 2.0
 #define TEXT_SIZE_MULTIPLIER    0.6
@@ -84,12 +87,9 @@ GluiRenderer glui_init_renderer(Vec2 size, char *font_file_path) {
   renderer.texture_object = glass_init_object(&renderer.texture_shader);
   renderer.glyphs_texture = glass_init_texture(GlassFilteringModeLinear);
 
-  FT_Init_FreeType(&renderer.freetype);
-
-  if (FT_New_Face(renderer.freetype, font_file_path, 0, &renderer.face)) {
-    ERROR("Could not load font from %s\n", font_file_path);
-    exit(1);
-  }
+  Str font_data = read_file(font_file_path);
+  stbtt_InitFont(&renderer.font, (u8 *) font_data.ptr,
+                 stbtt_GetFontOffsetForIndex((u8 *) font_data.ptr, 0));
 
   return renderer;
 }
@@ -155,28 +155,30 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
       return i;
   }
 
-  FT_Set_Pixel_Sizes(renderer->face, 0, text_size * TEXT_QUALITY_MULTIPLIER);
-  FT_Load_Char(renderer->face, _char, FT_LOAD_RENDER);
+  f32 scale = stbtt_ScaleForPixelHeight(&renderer->font,
+                                        text_size * TEXT_QUALITY_MULTIPLIER);
 
-  Vec2 size = vec2(renderer->face->glyph->bitmap.width / TEXT_QUALITY_MULTIPLIER,
-                   renderer->face->glyph->bitmap.rows / TEXT_QUALITY_MULTIPLIER);
+  i32 width, height, advance, left_side_bearing, x0, y0, x1, y1;
+  stbtt_GetCodepointHMetrics(&renderer->font, _char, &advance, &left_side_bearing);
+  stbtt_GetCodepointBitmapBox(&renderer->font, _char, scale, scale, &x0, &y0, &x1, &y1);
 
-  Vec2 bearing = vec2(renderer->face->glyph->bitmap_left / TEXT_QUALITY_MULTIPLIER,
-                      renderer->face->glyph->bitmap_top / TEXT_QUALITY_MULTIPLIER);
+  u8 *bitmap = stbtt_GetCodepointBitmap(&renderer->font, 0, scale, _char,
+                                        &width, &height, 0, 0);
 
-  u32 advance = renderer->face->glyph->advance.x / TEXT_QUALITY_MULTIPLIER;
-
+  Vec2 uv_size = vec2(width, height);
+  Vec2 size = vec2(width / TEXT_QUALITY_MULTIPLIER,
+                   height / TEXT_QUALITY_MULTIPLIER);
   f32 uv_x_pos = renderer->glyphs_texture_width;
 
   u8 *new_glyphs_texture_buffer =
     glui_concat_texture_buffers(&renderer->glyphs_texture_width,
                                 &renderer->glyphs_texture_height,
                                 renderer->glyphs_texture_buffer,
-                                renderer->face->glyph->bitmap.buffer,
+                                bitmap,
                                 renderer->glyphs_texture_width,
                                 renderer->glyphs_texture_height,
-                                renderer->face->glyph->bitmap.width,
-                                renderer->face->glyph->bitmap.rows);
+                                width,
+                                height);
 
   free(renderer->glyphs_texture_buffer);
   renderer->glyphs_texture_buffer = new_glyphs_texture_buffer;
@@ -187,7 +189,9 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size) {
                          renderer->glyphs_texture_height,
                          GlassPixelKindSingleColor);
 
-  GluiGlyph new_glyph = { _char, text_size, uv_x_pos, size, bearing, advance };
+  GluiGlyph new_glyph = {
+    _char, text_size, uv_x_pos, uv_size, size,
+    advance * scale, -y0 * scale };
   DA_APPEND(renderer->glyphs, new_glyph);
 
   return renderer->glyphs.len - 1;
@@ -212,7 +216,7 @@ static f32 glui_calculate_x_offset(GluiRenderer *renderer,
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
     if (i + 1 < text.len)
-      width += glyph->advance >> 6;
+      width += glyph->advance;
     else
       width += glyph->size.x;
   }
@@ -245,24 +249,24 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
 
     u32 glyph_index = get_glyph_index(renderer, _char, text_size);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
-    f32 y_offset = glyph->bearing.y + (line_index + LINE_SPACING) * text_size;
+    f32 y_offset = glyph->bearing_y + (line_index + LINE_SPACING) * text_size;
 
-    Vec4 glyph_bounds = vec4(bounds.x + x_offset + glyph->bearing.x,
+    Vec4 glyph_bounds = vec4(bounds.x + x_offset,
                              bounds.y + y_offset,
                              glyph->size.x,
                              glyph->size.y);
 
     Vec4 uv = vec4(glyph->uv_x_pos / renderer->glyphs_texture_width,
                    0.0,
-                   (glyph->uv_x_pos + glyph->size.x * TEXT_QUALITY_MULTIPLIER) /
+                   (glyph->uv_x_pos + glyph->uv_size.x) /
                    renderer->glyphs_texture_width,
-                   glyph->size.y * TEXT_QUALITY_MULTIPLIER /
+                   glyph->uv_size.y /
                    renderer->glyphs_texture_height);
 
     glui_push_primitive(renderer, GluiPrimitiveKindTexture,
                         glyph_bounds, color, uv);
 
-    x_offset += glyph->advance >> 6;
+    x_offset += glyph->advance;
   }
 }
 
@@ -312,7 +316,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     );
 
     Vec4 text_bounds = widget->bounds;
-    text_bounds.w = 48.0;
+    text_bounds.w = widget->as.text_editor.text_size;
 
     glui_gen_text_primitives(renderer, widget, text, text_bounds,
                              false, widget->style.fg_color);
