@@ -66,7 +66,7 @@ int main(void) {
                                        640, 480, WinxGraphicsModeOpenGL,
                                        NULL);
   glass_init();
-  Glui glui = glui_init(&window, "tests/FiraCode-Regular.ttf");
+  Glui glui = glui_init(&window, "tests/JetBrainsMono-Regular.ttf");
   setup_styles(&glui);
 
   bool is_running = true;

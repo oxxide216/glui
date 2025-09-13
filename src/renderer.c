@@ -14,6 +14,7 @@
 #define LINE_SPACING            0.0
 #define CHAR_SPACING            0.15
 #define SPACE_ANALOG            'n'
+#define CURSOR_WIDTH            2.5
 
 static Str general_vertex_src = STR_LIT(
   "#version 330 core\n"
@@ -150,7 +151,7 @@ static u8 *glui_concat_texture_buffers(u32 *new_width, u32 *new_height,
   return new_buffer;
 }
 
-static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size, f32 scale) {
+static u32 glui_get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size, f32 scale) {
   for (u32 i = 0; i < renderer->glyphs.len; ++i) {
     GluiGlyph *glyph = renderer->glyphs.items + i;
 
@@ -162,8 +163,8 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size, f32
   stbtt_GetCodepointHMetrics(&renderer->font, _char, &advance, &left_side_bearing);
   stbtt_GetCodepointBitmapBox(&renderer->font, _char, scale, scale, NULL, &yoff, NULL, NULL);
 
-  u8 *bitmap = stbtt_GetCodepointBitmap(&renderer->font, 0, scale, _char,
-                                        &width, &height, 0, 0);
+  u32 glyph_index = stbtt_FindGlyphIndex(&renderer->font, _char);
+  u8 *bitmap = stbtt_GetGlyphBitmap(&renderer->font, 0, scale, glyph_index, &width, &height, 0, 0);
 
   f32 uv_x_pos = renderer->glyphs_texture_width;
   Vec2 uv_size = vec2(width, height);
@@ -190,7 +191,7 @@ static u32 get_glyph_index(GluiRenderer *renderer, u32 _char, f32 text_size, f32
                          GlassPixelKindSingleColor);
 
   GluiGlyph new_glyph = {
-    _char, size, uv_size, uv_x_pos,
+    _char, size, {}, {}, uv_size, uv_x_pos,
     text_size, advance * scale, -yoff };
   DA_APPEND(renderer->glyphs, new_glyph);
 
@@ -215,7 +216,7 @@ static f32 glui_calculate_text_width(GluiRenderer *renderer, GluiWStr text,
     if (is_space)
       _char = SPACE_ANALOG;
 
-    u32 glyph_index = get_glyph_index(renderer, _char, text_size, scale);
+    u32 glyph_index = glui_get_glyph_index(renderer, _char, text_size, scale);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
     width += glyph->size.x + CHAR_SPACING * (text_size + is_space);
@@ -227,10 +228,9 @@ static f32 glui_calculate_text_width(GluiRenderer *renderer, GluiWStr text,
   return max_width;
 }
 
-static void glui_gen_text_primitives(GluiRenderer *renderer,
-                                     GluiWidget *widget,
-                                     GluiWStr text, Vec4 bounds,
-                                     bool center, Vec4 color) {
+static GluiGlyph *glui_gen_text_primitives(GluiRenderer *renderer,
+                                           GluiWidget *widget, GluiWStr text,
+                                           Vec4 bounds, bool center, Vec4 color) {
   f32 min_side_size = bounds.z < bounds.w ? bounds.z : bounds.w;
   f32 text_size = min_side_size * TEXT_SIZE_MULTIPLIER;
   f32 scale = stbtt_ScaleForPixelHeight(&renderer->font,
@@ -240,11 +240,15 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
 
   i32 ascent, descent;
   stbtt_GetFontVMetrics(&renderer->font, &ascent, &descent, NULL);
+  renderer->font_ascent = ascent * scale;
+  renderer->font_descent = -descent * scale;
 
   f32 base_x_offset = 0.0;
   if (center)
     base_x_offset = (widget->bounds.z - width) / 2.0;
   f32 x_offset = base_x_offset;
+
+  GluiGlyph *last_glyph = NULL;
 
   for (u32 i = 0; i < text.len; ++i) {
     u32 _char = text.ptr[i];
@@ -258,31 +262,33 @@ static void glui_gen_text_primitives(GluiRenderer *renderer,
     if (is_space)
       _char = SPACE_ANALOG;
 
-    u32 glyph_index = get_glyph_index(renderer, _char, text_size, scale);
-    GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
+    u32 glyph_index = glui_get_glyph_index(renderer, _char, text_size, scale);
+    last_glyph = renderer->glyphs.items + glyph_index;
+
+    f32 y_offset = (line_index + LINE_SPACING) * text_size +
+                   ascent * scale + descent * scale - last_glyph->bearing_y / 2.0;
+
+    last_glyph->bounds = vec4(bounds.x + x_offset,
+                              bounds.y + y_offset,
+                              last_glyph->size.x,
+                              last_glyph->size.y);
 
     if (!is_space) {
-      f32 y_offset = (line_index + LINE_SPACING) * text_size +
-                     ascent * scale + descent * scale - glyph->bearing_y / 2.0;
-
-      Vec4 glyph_bounds = vec4(bounds.x + x_offset,
-                               bounds.y + y_offset,
-                               glyph->size.x,
-                               glyph->size.y);
-
-      Vec4 uv = vec4(glyph->uv_x_pos / renderer->glyphs_texture_width,
-                     0.0,
-                     (glyph->uv_x_pos + glyph->uv_size.x) /
-                     renderer->glyphs_texture_width,
-                     glyph->uv_size.y /
-                     renderer->glyphs_texture_height);
+      last_glyph->uv = vec4(last_glyph->uv_x_pos / renderer->glyphs_texture_width,
+                            0.0,
+                            (last_glyph->uv_x_pos + last_glyph->uv_size.x) /
+                            renderer->glyphs_texture_width,
+                            last_glyph->uv_size.y /
+                            renderer->glyphs_texture_height);
 
       glui_push_primitive(renderer, GluiPrimitiveKindTexture,
-                          glyph_bounds, color, uv);
+                          last_glyph->bounds, color, last_glyph->uv);
     }
 
-    x_offset += glyph->size.x + CHAR_SPACING * (text_size + is_space);
+    x_offset += last_glyph->size.x + CHAR_SPACING * text_size;
   }
+
+  return last_glyph;
 }
 
 static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widget) {
@@ -300,8 +306,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, bg_color, (Vec4) {0});
 
-    glui_gen_text_primitives(renderer, widget,
-                             widget->as.button.text,
+    glui_gen_text_primitives(renderer, widget, widget->as.button.text,
                              widget->bounds, true, fg_color);
   } break;
 
@@ -316,8 +321,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
   case GluiWidgetKindText: {
     glui_gen_text_primitives(renderer, widget,
                              widget->as.text.text,
-                             widget->bounds,
-                             true,
+                             widget->bounds, true,
                              widget->style.fg_color);
   } break;
 
@@ -325,16 +329,53 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     glui_push_primitive(renderer, GluiPrimitiveKindQuad,
                         widget->bounds, widget->style.bg_color, (Vec4) {0});
 
-    GluiWStr text = {
-      widget->as.text_editor.editor.buffer.items,
-      widget->as.text_editor.editor.buffer.len,
-    };
+    GluiWidgetTextEditor *editor_widget = &widget->as.text_editor;
 
     Vec4 text_bounds = widget->bounds;
-    text_bounds.w = widget->as.text_editor.text_size;
+    text_bounds.w = editor_widget->text_size;
+    f32 text_size_scaled = editor_widget->text_size * TEXT_SIZE_MULTIPLIER;
 
-    glui_gen_text_primitives(renderer, widget, text, text_bounds,
-                             false, widget->style.fg_color);
+    for (u32 i = 0; i < editor_widget->editor.lines.len; ++i) {
+      GluiWStr text = {
+        editor_widget->editor.lines.items[i].items,
+        editor_widget->editor.lines.items[i].len,
+      };
+
+      if (i == editor_widget->editor.row)
+        text.len = editor_widget->editor.col;
+
+      GluiGlyph *last_glyph = glui_gen_text_primitives(renderer, widget, text, text_bounds,
+                                                       false, widget->style.fg_color);
+      Vec4 last_glyph_bounds = {0};
+      if (last_glyph)
+        last_glyph_bounds = last_glyph->bounds;
+
+      if (i == editor_widget->editor.row) {
+        text = (GluiWStr) {
+          editor_widget->editor.lines.items[i].items + editor_widget->editor.col,
+          editor_widget->editor.lines.items[i].len - editor_widget->editor.col,
+        };
+
+        Vec4 cursor_bounds = vec4(last_glyph_bounds.x + last_glyph_bounds.z,
+                                  text_bounds.y + renderer->font_descent / 3.0,
+                                  CURSOR_WIDTH,
+                                  renderer->font_ascent - renderer->font_descent);
+
+        glui_push_primitive(renderer, GluiPrimitiveKindQuad,
+                            cursor_bounds, widget->style.fg_color, (Vec4) {0});
+
+        text_bounds.x = cursor_bounds.x;
+        if (editor_widget->editor.col > 0)
+          text_bounds.x += CHAR_SPACING * text_size_scaled;
+
+        glui_gen_text_primitives(renderer, widget, text, text_bounds,
+                                 false, widget->style.fg_color);
+
+        text_bounds.x = widget->bounds.x;
+      }
+
+      text_bounds.y += text_size_scaled;
+    }
   } break;
   }
 }

@@ -256,6 +256,8 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
     widget->bounds = glui->current_abs_bounds;
   widget->parent = glui->current_list;
 
+  if (widget->as.text_editor.editor.lines.len == 0)
+    DA_APPEND(widget->as.text_editor.editor.lines, (GluiTextEditorLine) {0});
   widget->as.text_editor.text_size = text_size;
 
   glui->are_bounds_abs = false;
@@ -270,6 +272,10 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
       glui_text_editor_move_left(&widget->as.text_editor.editor);
     } else if (key_code == WinxKeyCodeRight) {
       glui_text_editor_move_right(&widget->as.text_editor.editor);
+    } else if (key_code == WinxKeyCodeDown) {
+      glui_text_editor_move_down(&widget->as.text_editor.editor);
+    } else if (key_code == WinxKeyCodeUp) {
+      glui_text_editor_move_up(&widget->as.text_editor.editor);
     } else if (key_code == WinxKeyCodeBackspace) {
       glui_text_editor_delete_prev(&widget->as.text_editor.editor);
     } else if (key_code == WinxKeyCodeDelete) {
