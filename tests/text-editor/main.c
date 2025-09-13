@@ -8,7 +8,7 @@
 #define ROOT_BG_COLOR    vec4(0.0, 0.0, 0.0, 0.0)
 #define MAIN_BG_COLOR    vec4(0.1, 0.1, 0.1, 0.8)
 #define TEXT_COLOR       vec4(0.5, 0.5, 0.7, 1.0)
-#define TEXT_SIZE        48.0
+#define TEXT_SIZE        36.0
 
 bool process_event(WinxEvent *event) {
   if (event->kind == WinxEventKindQuit) {
@@ -30,7 +30,7 @@ void setup_styles(Glui *glui) {
 }
 
 void render_ui(Glui *glui) {
-  GluiTextEditor *editor = glui_text_editor(glui, TEXT_SIZE, "text-editor");
+  glui_text_editor(glui, TEXT_SIZE, "text-editor");
 }
 
 int main(void) {

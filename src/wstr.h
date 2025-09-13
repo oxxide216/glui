@@ -13,4 +13,6 @@ typedef struct {
   u32        len;
 } GluiWStr;
 
+bool wstr_eq(GluiWStr a, GluiWStr b);
+
 #endif // GLUI_WSTR_H

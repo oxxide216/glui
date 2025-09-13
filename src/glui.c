@@ -1,6 +1,7 @@
 #include "glui.h"
 #include "winx/src/event.h"
 #include "widgets.h"
+#include "misc.h"
 #define SHL_ARENA_IMPLEMENTATION
 #include "shl_arena.h"
 
@@ -38,6 +39,9 @@ Glui glui_init(WinxWindow *window, char *font_file_path) {
 }
 
 static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
+  if (!root_widget->is_dirty)
+    return;
+
   if (!root_widget->are_bounds_abs)
     root_widget->bounds = bounds;
 
@@ -79,13 +83,13 @@ void glui_next_frame(Glui *glui) {
   if (glui->renderer.size.x != (f32) glui->window->width) {
     glui->size.x = (f32) glui->window->width;
     glui->renderer.size.x = (f32) glui->window->width;
-    glui->renderer.redraw = true;
+    glui->root_widget->is_dirty = true;
   }
 
   if (glui->renderer.size.y != (f32) glui->window->height) {
     glui->size.y = (f32) glui->window->height;
     glui->renderer.size.y = (f32) glui->window->height;
-    glui->renderer.redraw = true;
+    glui->root_widget->is_dirty = true;
   }
 
   glui->events.len = 0;
@@ -154,22 +158,38 @@ static GluiWidget *glui_get_widget(GluiWidget *root_widget,
   return widget;
 }
 
-bool glui_button_id(Glui *glui, char *file_name, u32 line,
-                    GluiWStr text, char *class) {
-  (void) text;
-
+GluiWidget *glui_setup_widget(Glui *glui, GluiWidgetKind kind,
+                              char *file_name, u32 line, char *class) {
   GluiWidget *widget = glui_get_widget(glui->root_widget,
                                        glui->current_list,
                                        file_name, line);
-  if (widget->kind != GluiWidgetKindButton)
-    return false;
+  GluiStyle *style = glui_get_style(glui, class);
 
-  widget->kind = GluiWidgetKindButton;
-  widget->style = *glui_get_style(glui, class);
+  if (widget->kind != kind ||
+      !glui_style_eq(&widget->style, style) ||
+      widget->are_bounds_abs != glui->are_bounds_abs ||
+      (glui->are_bounds_abs &&
+       !glui_vec4_eq(&widget->bounds, &glui->current_abs_bounds)) ||
+      widget->parent != glui->current_list)
+    widget->is_dirty = true;
+
+  widget->kind = kind;
+  widget->style = *style;
   widget->are_bounds_abs = glui->are_bounds_abs;
   if (widget->are_bounds_abs)
     widget->bounds = glui->current_abs_bounds;
   widget->parent = glui->current_list;
+
+  return widget;
+}
+
+bool glui_button_id(Glui *glui, char *file_name, u32 line,
+                    GluiWStr text, char *class) {
+  GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindButton,
+                                         file_name, line, class);
+
+  if (!wstr_eq(widget->as.button.text, text))
+    widget->is_dirty = true;
 
   widget->as.button.text = text;
 
@@ -181,11 +201,14 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
     f32 y = (f32) event.as.button.y;
 
     if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
-        y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
+        y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w) {
+      widget->is_dirty = true;
       widget->as.button.pressed = true;
+    }
   } else if (widget->as.button.pressed) {
     event = glui_get_event_of_kind(glui, EVENT_MASK(WinxEventKindButtonRelease));
     if (event.kind != WinxEventKindNone) {
+      widget->is_dirty = true;
       widget->as.button.pressed = false;
 
       f32 x = (f32) event.as.button.x;
@@ -202,16 +225,12 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
 
 void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
                         GluiListKind kind, Vec2 margin, char *class) {
-  GluiWidget *widget = glui_get_widget(glui->root_widget,
-                                       glui->current_list,
-                                       file_name, line);
+  GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindList,
+                                         file_name, line, class);
 
-  widget->kind = GluiWidgetKindList;
-  widget->style = *glui_get_style(glui, class);
-  widget->are_bounds_abs = glui->are_bounds_abs;
-  if (widget->are_bounds_abs)
-    widget->bounds = glui->current_abs_bounds;
-  widget->parent = glui->current_list;
+  if (widget->as.list.kind != kind ||
+      !glui_vec2_eq(&widget->as.list.margin, &margin))
+    widget->is_dirty = true;
 
   widget->as.list.kind = kind;
   widget->as.list.margin = margin;
@@ -227,16 +246,11 @@ void glui_end_list(Glui *glui) {
 
 void glui_text_id(Glui *glui, char *file_name,
                   u32 line, GluiWStr text, char *class) {
-  GluiWidget *widget = glui_get_widget(glui->root_widget,
-                                       glui->current_list,
-                                       file_name, line);
+  GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindText,
+                                         file_name, line, class);
 
-  widget->kind = GluiWidgetKindText;
-  widget->style = *glui_get_style(glui, class);
-  widget->are_bounds_abs = glui->are_bounds_abs;
-  if (widget->are_bounds_abs)
-    widget->bounds = glui->current_abs_bounds;
-  widget->parent = glui->current_list;
+  if (!wstr_eq(widget->as.text.text, text))
+    widget->is_dirty = true;
 
   widget->as.text.text = text;
 
@@ -245,16 +259,11 @@ void glui_text_id(Glui *glui, char *file_name,
 
 GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
                                     f32 text_size, char *class) {
-  GluiWidget *widget = glui_get_widget(glui->root_widget,
-                                       glui->current_list,
-                                       file_name, line);
+  GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindTextEditor,
+                                         file_name, line, class);
 
-  widget->kind = GluiWidgetKindTextEditor;
-  widget->style = *glui_get_style(glui, class);
-  widget->are_bounds_abs = glui->are_bounds_abs;
-  if (widget->are_bounds_abs)
-    widget->bounds = glui->current_abs_bounds;
-  widget->parent = glui->current_list;
+  if (widget->as.text_editor.text_size != text_size)
+    widget->is_dirty = true;
 
   if (widget->as.text_editor.editor.lines.len == 0)
     DA_APPEND(widget->as.text_editor.editor.lines, (GluiTextEditorLine) {0});
@@ -268,26 +277,51 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
     WinxKeyCode key_code = event.as.key.key_code;
     GluiWChar _char = event.as.key._char;
 
-    if (key_code == WinxKeyCodeLeft) {
+    bool new_is_dirty = true;
+
+    switch (key_code) {
+    case WinxKeyCodeLeft: {
       glui_text_editor_move_left(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeRight) {
+    } break;
+
+    case WinxKeyCodeRight: {
       glui_text_editor_move_right(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeDown) {
+    } break;
+    case WinxKeyCodeDown: {
       glui_text_editor_move_down(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeUp) {
+    } break;
+
+    case WinxKeyCodeUp: {
       glui_text_editor_move_up(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeBackspace) {
+    } break;
+
+    case WinxKeyCodeBackspace: {
       glui_text_editor_delete_prev(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeDelete) {
+    } break;
+
+    case WinxKeyCodeDelete: {
       glui_text_editor_delete_next(&widget->as.text_editor.editor);
-    } else if (key_code == WinxKeyCodeTab) {
+    } break;
+
+    case WinxKeyCodeTab: {
       for (u32 i = 0; i < TEXT_EDITOR_TAB_WIDTH; ++i)
         glui_text_editor_insert(&widget->as.text_editor.editor, ' ');
-    } else if (key_code == WinxKeyCodeEnter) {
+    } break;
+
+    case WinxKeyCodeEnter: {
       glui_text_editor_insert(&widget->as.text_editor.editor, '\n');
-    } else if (_char) {
-      glui_text_editor_insert(&widget->as.text_editor.editor, _char);
+    } break;
+
+    default: {
+      if (_char)
+        glui_text_editor_insert(&widget->as.text_editor.editor, _char);
+      else
+        new_is_dirty = false;
+    } break;
     }
+
+    if (!widget->is_dirty)
+      widget->is_dirty = new_is_dirty;
   }
 
   return &widget->as.text_editor.editor;
