@@ -5,8 +5,9 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define MAIN_BG_COLOR    vec4(0.0, 0.0, 0.0, 1.0)
-#define TEXT_COLOR       vec4(0.66, 0.7, 0.7, 1.0)
+#define ROOT_BG_COLOR    vec4(0.0, 0.0, 0.0, 0.0)
+#define MAIN_BG_COLOR    vec4(0.1, 0.1, 0.1, 0.8)
+#define TEXT_COLOR       vec4(0.5, 0.5, 0.7, 1.0)
 #define TEXT_SIZE        48.0
 
 bool process_event(WinxEvent *event) {
@@ -23,6 +24,7 @@ bool process_event(WinxEvent *event) {
 }
 
 void setup_styles(Glui *glui) {
+  glui_get_style(glui, "root")->bg_color = ROOT_BG_COLOR;
   glui_get_style(glui, "text-editor")->bg_color = MAIN_BG_COLOR;
   glui_get_style(glui, "text-editor")->fg_color = TEXT_COLOR;
 }
