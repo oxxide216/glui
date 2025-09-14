@@ -1,6 +1,7 @@
 #include "winx/src/winx.h"
 #include "winx/src/event.h"
 #include "glui.h"
+#include "io.h"
 #include "shl_log.h"
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
@@ -10,27 +11,49 @@
 #define TEXT_COLOR       vec4(0.5, 0.5, 0.7, 1.0)
 #define TEXT_SIZE        36.0
 
-bool process_event(WinxEvent *event) {
+typedef enum {
+  ActionNone = 0,
+  ActionQuit,
+  ActionSave,
+  ActionOpen,
+} Action;
+
+Action process_event(WinxEvent *event, bool *is_ctrl_pressed) {
   if (event->kind == WinxEventKindQuit) {
-    return false;
+    return ActionQuit;
   } else if (event->kind == WinxEventKindResize) {
     u32 width = event->as.resize.width;
     u32 height = event->as.resize.height;
 
     glass_resize(width, height);
+  } else if (event->kind == WinxEventKindKeyPress) {
+    if (event->as.key.key_code == WinxKeyCodeLeftControl)
+      *is_ctrl_pressed = true;
+    else if (event->as.key.key_code == WinxKeyCodeS && *is_ctrl_pressed)
+      return ActionSave;
+    else if (event->as.key.key_code == WinxKeyCodeO && *is_ctrl_pressed)
+      return ActionOpen;
+  } else if (event->kind == WinxEventKindKeyRelease) {
+    if (event->as.key.key_code == WinxKeyCodeLeftControl)
+      *is_ctrl_pressed = false;
   }
 
-  return true;
+  return ActionNone;
 }
 
 void setup_styles(Glui *glui) {
   glui_get_style(glui, "root")->bg_color = ROOT_BG_COLOR;
-  glui_get_style(glui, "text-editor")->bg_color = MAIN_BG_COLOR;
+  glui_get_style(glui, "block")->bg_color = MAIN_BG_COLOR;
+  glui_get_style(glui, "text-editor")->bg_color = ROOT_BG_COLOR;
   glui_get_style(glui, "text-editor")->fg_color = TEXT_COLOR;
 }
 
-void render_ui(Glui *glui) {
-  glui_text_editor(glui, TEXT_SIZE, "text-editor");
+void render_ui(Glui *glui, GluiTextEditor **editor) {
+  glui_begin_list(glui, GluiListKindHorizontal, vec2(5.0, 5.0), "block");
+
+  *editor = glui_text_editor(glui, TEXT_SIZE, "text-editor");
+
+  glui_end_list(glui);
 }
 
 int main(void) {
@@ -42,15 +65,55 @@ int main(void) {
   Glui glui = glui_init(&window, "tests/JetBrainsMono-Regular.ttf");
   setup_styles(&glui);
 
+  GluiTextEditor *editor = NULL;;
+  bool is_ctrl_pressed = false;
   bool is_running = true;
+
   while (is_running) {
     for (u32 i = 0; i < glui.events.len; ++i) {
-      is_running = process_event(glui.events.items + i);
-      if (!is_running)
+      Action action = process_event(glui.events.items + i, &is_ctrl_pressed);
+
+      if (action == ActionQuit) {
+        is_running = false;
         break;
+      } else if (action == ActionSave && editor) {
+        StringBuilder sb = {0};
+        for (u32 i = 0; i < editor->lines.len; ++i) {
+          if (i > 0)
+            sb_push_char(&sb, '\n');
+
+          Str line_str = {
+            malloc(editor->lines.items[i].len),
+            editor->lines.items[i].len,
+          };
+
+          for (u32 j = 0; j < editor->lines.items[i].len; ++j) {
+            line_str.ptr[j] = editor->lines.items[i].items[j];
+          }
+
+          sb_push_str(&sb, line_str);
+        }
+
+        write_file("text.txt", sb_to_str(sb));
+      } else if (action == ActionOpen && editor) {
+        editor->lines.len = 1;
+        GluiTextEditorLine *line = editor->lines.items;
+        line->len = 0;
+
+        Str content = read_file("text.txt");
+        for (u32 j = 0; j < content.len; ++j) {
+          if (content.ptr[j] == '\n') {
+            DA_APPEND(editor->lines, (GluiTextEditorLine) {0});
+            ++line;
+            continue;
+          }
+
+          DA_APPEND(*line, (GluiWChar) content.ptr[j]);
+        }
+      }
     }
 
-    render_ui(&glui);
+    render_ui(&glui, &editor);
     glui_next_frame(&glui);
     winx_draw(&window);
   }

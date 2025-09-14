@@ -346,7 +346,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
 
       GluiGlyph *last_glyph = glui_gen_text_primitives(renderer, widget, text, text_bounds,
                                                        false, widget->style.fg_color);
-      Vec4 last_glyph_bounds = {0};
+      Vec4 last_glyph_bounds = vec4(widget->bounds.x, widget->bounds.y, 0.0, 0.0);
       if (last_glyph)
         last_glyph_bounds = last_glyph->bounds;
 
