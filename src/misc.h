@@ -1,7 +1,7 @@
 #ifndef GLUI_MISC_H
 #define GLUI_MISC_H
 
-#include "glass/src/math.h"
+#include "glass/math.h"
 #include "widgets.h"
 #include "shl_defs.h"
 

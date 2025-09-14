@@ -1,5 +1,5 @@
-#include "glui.h"
-#include "winx/src/event.h"
+#include "glui/glui.h"
+#include "winx/event.h"
 #include "widgets.h"
 #include "misc.h"
 #define SHL_ARENA_IMPLEMENTATION

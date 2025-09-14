@@ -1,14 +1,14 @@
 #ifndef GLUI_H
 #define GLUI_H
 
-#include "winx/src/winx.h"
-#include "winx/src/event.h"
-#include "glass/src/math.h"
-#include "shl_str.h"
-#include "shl_defs.h"
-#include "widgets.h"
-#include "renderer.h"
-#include "text-editor.h"
+#include "winx/winx.h"
+#include "winx/event.h"
+#include "glass/math.h"
+#include "../../src/shl_str.h"
+#include "../../src/shl_defs.h"
+#include "../../src/widgets.h"
+#include "../../src/renderer.h"
+#include "../../src/text-editor.h"
 
 #define glui_button(glui, text, class)                  \
   glui_button_id(glui, __FILE__, __LINE__, text, class)

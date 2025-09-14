@@ -1,8 +1,8 @@
 #ifndef GLUI_VERTICES_H
 #define GLUI_VERTICES_H
 
-#include "glass/src/glass.h"
-#include "glass/src/math.h"
+#include "glass/glass.h"
+#include "glass/math.h"
 #include "renderer.h"
 
 typedef struct {

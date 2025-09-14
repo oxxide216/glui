@@ -1,7 +1,7 @@
 #ifndef GLUI_WIDGETS_H
 #define GLUI_WIDGETS_H
 
-#include "glass/src/math.h"
+#include "glass/math.h"
 #include "text-editor.h"
 #include "wstr.h"
 

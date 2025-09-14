@@ -1,7 +1,7 @@
 #include <math.h>
 
 #include "renderer.h"
-#include "glass/src/params.h"
+#include "glass/params.h"
 #include "vertices.h"
 #include "shl_log.h"
 #include "io.h"

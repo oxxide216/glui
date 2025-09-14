@@ -1,6 +1,6 @@
 #!/usr/bin/sh
 
-CFLAGS="-Wall -Wextra -Isrc -Ilibs -Ilibs/winx/src"
+CFLAGS="-Wall -Wextra -Iinclude -Ilibs/winx/include -Ilibs/glass/include"
 LDFLAGS="-z execstack -lX11 -lGL -lGLEW -lm"
 BUILD_FLAGS="${@:1}"
 SRC="$(find src -name "*.c")"
