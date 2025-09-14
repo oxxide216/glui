@@ -1,6 +1,6 @@
-#include "winx/src/winx.h"
-#include "winx/src/event.h"
-#include "glui.h"
+#include "winx/winx.h"
+#include "winx/event.h"
+#include "glui/glui.h"
 #include "io.h"
 #include "shl_log.h"
 #define SHL_STR_IMPLEMENTATION
