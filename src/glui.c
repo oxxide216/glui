@@ -245,7 +245,7 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindButton,
                                          file_name, line, class);
 
-  if (!wstr_eq(widget->as.button.text, text))
+  if (!glui_wstr_eq(widget->as.button.text, text))
     widget->is_dirty = true;
 
   widget->as.button.text = text;
@@ -307,7 +307,7 @@ void glui_text_id(Glui *glui, char *file_name,
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindText,
                                          file_name, line, class);
 
-  if (!wstr_eq(widget->as.text.text, text))
+  if (!glui_wstr_eq(widget->as.text.text, text))
     widget->is_dirty = true;
 
   widget->as.text.text = text;

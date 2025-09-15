@@ -1,6 +1,6 @@
 #include "wstr.h"
 
-bool wstr_eq(GluiWStr a, GluiWStr b) {
+bool glui_wstr_eq(GluiWStr a, GluiWStr b) {
   if (a.len != b.len)
     return false;
 
