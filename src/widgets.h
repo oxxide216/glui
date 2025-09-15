@@ -70,6 +70,7 @@ struct GluiWidget {
   GluiWidgetId    id;
   GluiStyle       style;
   Vec4            bounds;
+  f32             fixed_width;
   bool            are_bounds_abs;
   bool            is_dirty;
   GluiWidget     *parent;

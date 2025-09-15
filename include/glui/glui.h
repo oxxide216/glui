@@ -33,6 +33,7 @@ typedef struct {
   WinxWindow   *window;
   GluiEvents    events;
   Vec4          current_abs_bounds;
+  f32           fixed_width;
   bool          are_bounds_abs;
 } Glui;
 
@@ -42,6 +43,7 @@ void      glui_next_frame(Glui *glui);
 
 GluiStyle *glui_get_style(Glui *glui, char *class);
 void       glui_abs_bounds(Glui *glui, Vec4 bounds);
+void       glui_fixed_width(Glui *glui, f32 width);
 
 bool            glui_button_id(Glui *glui, char *file_name, u32 line,
                                GluiWStr text, char *class);

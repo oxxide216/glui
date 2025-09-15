@@ -45,6 +45,7 @@ void render_ui(Glui *glui) {
 
   glui_text(glui, GLUI_WSTR(L"Some text"), "text");
 
+  glui_fixed_width(glui, 36.0);
   bool clicked0 = glui_button(glui, GLUI_WSTR(L"Click me!"), "button");
   if (clicked0)
     INFO("Button 0 was clicked!\n");

@@ -45,7 +45,8 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
   if (!root_widget->are_bounds_abs)
     root_widget->bounds = bounds;
 
-  if (root_widget->kind != GluiWidgetKindList)
+  if (root_widget->kind != GluiWidgetKindList ||
+      root_widget->as.list.children.len == 0)
     return;
 
   Vec4 free_space = vec4(root_widget->bounds.x + root_widget->as.list.margin.x,
@@ -53,22 +54,71 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
                          root_widget->bounds.z - root_widget->as.list.margin.x * 2.0,
                          root_widget->bounds.w - root_widget->as.list.margin.y * 2.0);
 
+  f32 child_width = 0.0;
   Vec2 offset = {0};
+
   if (root_widget->as.list.kind == GluiListKindHorizontal) {
-    free_space.z = (free_space.z - root_widget->as.list.margin.x *
-                    (root_widget->as.list.children.len - 1.0)) / root_widget->as.list.children.len;
-    offset.x = free_space.z + root_widget->as.list.margin.x;
+    Vec4 temp_free_space = free_space;
+    for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
+      f32 width = root_widget->as.list.children.items[i]->fixed_width;
+
+      if (width != 0.0) {
+        temp_free_space.z -= width;
+        if (temp_free_space.z < 0.0)
+          temp_free_space.z = 0.0;
+      }
+    }
+    child_width = (temp_free_space.z - root_widget->as.list.margin.x *
+                   (root_widget->as.list.children.len - 1.0)) /
+                   root_widget->as.list.children.len;
+    free_space.z = child_width;
+    offset.x = child_width + root_widget->as.list.margin.x;
   } else {
-    free_space.w = (free_space.w - root_widget->as.list.margin.y *
-                    (root_widget->as.list.children.len - 1.0)) / root_widget->as.list.children.len;
+    Vec4 temp_free_space = free_space;
+    for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
+      f32 width = root_widget->as.list.children.items[i]->fixed_width;
+
+      if (width != 0.0) {
+        temp_free_space.w -= width;
+        if (temp_free_space.w < 0.0)
+          temp_free_space.w = 0.0;
+      }
+    }
+    child_width = (temp_free_space.w - root_widget->as.list.margin.y *
+                   (root_widget->as.list.children.len - 1.0)) /
+                   root_widget->as.list.children.len;
+    free_space.w = child_width;
     offset.y = free_space.w + root_widget->as.list.margin.y;
   }
 
   for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
-    glui_compute_bounds(root_widget->as.list.children.items[i], free_space);
+    GluiWidget *child = root_widget->as.list.children.items[i];
 
-    free_space.x += offset.x;
-    free_space.y += offset.y;
+    if (child->fixed_width == 0.0) {
+      if (child->as.list.kind == GluiListKindHorizontal)
+        free_space.z = child_width;
+      else
+        free_space.w = child_width;
+    } else {
+      if (child->as.list.kind == GluiListKindHorizontal)
+        free_space.z = child->fixed_width;
+      else
+        free_space.w = child->fixed_width;
+    }
+
+    glui_compute_bounds(child, free_space);
+
+    if (child->fixed_width == 0.0) {
+      if (child->as.list.kind == GluiListKindHorizontal)
+        free_space.x += offset.x;
+      else
+        free_space.y += offset.y;
+    } else {
+      if (child->as.list.kind == GluiListKindHorizontal)
+        free_space.x += child->fixed_width + root_widget->as.list.margin.x;
+      else
+        free_space.y += child->fixed_width + root_widget->as.list.margin.y;
+    }
   }
 }
 
@@ -113,6 +163,10 @@ GluiStyle *glui_get_style(Glui *glui, char *class) {
 void glui_abs_bounds(Glui *glui, Vec4 bounds) {
   glui->current_abs_bounds = bounds;
   glui->are_bounds_abs = true;
+}
+
+void glui_fixed_width(Glui *glui, f32 width) {
+  glui->fixed_width = width;
 }
 
 static GluiWidget *glui_get_widget_rec(GluiWidget *root_widget, char *file_name, u32 line) {
@@ -169,8 +223,13 @@ GluiWidget *glui_setup_widget(Glui *glui, GluiWidgetKind kind,
   widget->kind = kind;
   widget->style = *style;
   widget->are_bounds_abs = glui->are_bounds_abs;
-  if (widget->are_bounds_abs)
+  if (widget->are_bounds_abs) {
     widget->bounds = glui->current_abs_bounds;
+  } else if (glui->fixed_width != 0.0) {
+    widget->fixed_width = glui->fixed_width;
+    widget->fixed_width = glui->fixed_width;
+    glui->fixed_width = 0.0;
+  }
   widget->parent = glui->current_list;
 
   return widget;
