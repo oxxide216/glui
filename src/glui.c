@@ -59,10 +59,13 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
 
   if (root_widget->as.list.kind == GluiListKindHorizontal) {
     Vec4 temp_free_space = free_space;
+    u32 fillers_count = 0;
     for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
       f32 width = root_widget->as.list.children.items[i]->fixed_width;
 
-      if (width != 0.0) {
+      if (width == 0.0) {
+        ++fillers_count;
+      } else {
         temp_free_space.z -= width;
         if (temp_free_space.z < 0.0)
           temp_free_space.z = 0.0;
@@ -70,15 +73,18 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
     }
     child_width = (temp_free_space.z - root_widget->as.list.margin.x *
                    (root_widget->as.list.children.len - 1.0)) /
-                   root_widget->as.list.children.len;
+                   fillers_count;
     free_space.z = child_width;
     offset.x = child_width + root_widget->as.list.margin.x;
   } else {
     Vec4 temp_free_space = free_space;
+    u32 fillers_count = 0;
     for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
       f32 width = root_widget->as.list.children.items[i]->fixed_width;
 
-      if (width != 0.0) {
+      if (width == 0.0) {
+        ++fillers_count;
+      } else {
         temp_free_space.w -= width;
         if (temp_free_space.w < 0.0)
           temp_free_space.w = 0.0;
@@ -86,7 +92,7 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
     }
     child_width = (temp_free_space.w - root_widget->as.list.margin.y *
                    (root_widget->as.list.children.len - 1.0)) /
-                   root_widget->as.list.children.len;
+                   fillers_count;
     free_space.w = child_width;
     offset.y = free_space.w + root_widget->as.list.margin.y;
   }
@@ -226,7 +232,6 @@ GluiWidget *glui_setup_widget(Glui *glui, GluiWidgetKind kind,
   if (widget->are_bounds_abs) {
     widget->bounds = glui->current_abs_bounds;
   } else if (glui->fixed_width != 0.0) {
-    widget->fixed_width = glui->fixed_width;
     widget->fixed_width = glui->fixed_width;
     glui->fixed_width = 0.0;
   }
