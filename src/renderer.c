@@ -361,8 +361,9 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
                                   CURSOR_WIDTH,
                                   renderer->font_ascent - renderer->font_descent);
 
-        glui_push_primitive(renderer, GluiPrimitiveKindQuad,
-                            cursor_bounds, widget->style.fg_color, (Vec4) {0});
+        if (!editor_widget->is_locked)
+          glui_push_primitive(renderer, GluiPrimitiveKindQuad,
+                              cursor_bounds, widget->style.fg_color, (Vec4) {0});
 
         text_bounds.x = cursor_bounds.x;
         if (editor_widget->editor.col > 0)

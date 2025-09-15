@@ -93,20 +93,20 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
 
   for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
     GluiWidget *child = root_widget->as.list.children.items[i];
-
+    Vec4 child_bounds = free_space;
     if (child->fixed_width == 0.0) {
       if (child->as.list.kind == GluiListKindHorizontal)
-        free_space.z = child_width;
+        child_bounds.z = child_width;
       else
-        free_space.w = child_width;
+        child_bounds.w = child_width;
     } else {
       if (child->as.list.kind == GluiListKindHorizontal)
-        free_space.z = child->fixed_width;
+        child_bounds.z = child->fixed_width;
       else
-        free_space.w = child->fixed_width;
+        child_bounds.w = child->fixed_width;
     }
 
-    glui_compute_bounds(child, free_space);
+    glui_compute_bounds(child, child_bounds);
 
     if (child->fixed_width == 0.0) {
       if (child->as.list.kind == GluiListKindHorizontal)
