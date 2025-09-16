@@ -41,6 +41,7 @@ void glui_text_editor_move_up(GluiTextEditor *editor) {
 void glui_text_editor_move_left_word(GluiTextEditor *editor, bool delete) {
   if (editor->col == 0 && editor->row > 0) {
     editor->col = glui_get_line(editor, --editor->row)->len;
+    return;
   }
 
   bool find_alnum = false;
@@ -52,7 +53,7 @@ void glui_text_editor_move_left_word(GluiTextEditor *editor, bool delete) {
 
     if (delete) {
       GluiTextEditorLine *line = glui_get_line(editor, editor->row);
-      DA_REMOVE_AT(*line, editor->col);
+      DA_REMOVE_AT(*line, editor->col - 1);
     }
 
     --editor->col;
@@ -64,6 +65,7 @@ void glui_text_editor_move_right_word(GluiTextEditor *editor, bool delete) {
       editor->row + 1 < editor->lines.len) {
     ++editor->row;
     editor->col = 0;
+    return;
   }
 
   bool find_alnum = false;
