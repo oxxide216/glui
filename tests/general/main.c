@@ -43,7 +43,7 @@ void render_ui(Glui *glui) {
   glui_abs_bounds(glui, bounds);
   glui_begin_list(glui, GluiListKindVertical, vec2(20.0, 20.0), "block");
 
-  glui_text(glui, GLUI_WSTR(L"Some text"), "text");
+  glui_text(glui, GLUI_WSTR(L"Some text"), true, "text");
 
   glui_fixed_width(glui, 36.0);
   bool clicked0 = glui_button(glui, GLUI_WSTR(L"Click me!"), "button");

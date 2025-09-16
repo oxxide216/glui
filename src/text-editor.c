@@ -45,15 +45,15 @@ void glui_text_editor_move_left_word(GluiTextEditor *editor, bool delete) {
 
   bool find_alnum = false;
   while (editor->col > 0) {
-    if (delete) {
-      GluiTextEditorLine *line = glui_get_line(editor, editor->row);
-      DA_REMOVE_AT(*line, editor->col);
-    }
-
     if (isalnum(glui_get_line(editor, editor->row)->items[editor->col - 1]))
       find_alnum = true;
     else if (find_alnum)
       break;
+
+    if (delete) {
+      GluiTextEditorLine *line = glui_get_line(editor, editor->row);
+      DA_REMOVE_AT(*line, editor->col);
+    }
 
     --editor->col;
   }
