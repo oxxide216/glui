@@ -347,6 +347,10 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
       if (i == editor_widget->editor.row)
         text.len = editor_widget->editor.col;
 
+      if (text_bounds.y + text_bounds.w >=
+          widget->bounds.y + widget->bounds.w)
+        break;
+
       GluiGlyph *last_glyph = glui_gen_text_primitives(renderer, widget, text, text_bounds,
                                                        false, widget->style.fg_color);
       Vec4 last_glyph_bounds = vec4(widget->bounds.x, widget->bounds.y, 0.0, 0.0);
@@ -371,6 +375,10 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
         text_bounds.x = cursor_bounds.x;
         if (editor_widget->editor.col > 0)
           text_bounds.x += CHAR_SPACING * text_size_scaled;
+
+        if (text_bounds.y + text_bounds.w >=
+            widget->bounds.y + widget->bounds.w)
+          break;
 
         glui_gen_text_primitives(renderer, widget, text, text_bounds,
                                  false, widget->style.fg_color);
