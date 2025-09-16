@@ -57,11 +57,6 @@ void glui_text_editor_move_left_word(GluiTextEditor *editor, bool delete) {
 
     --editor->col;
   }
-
-  if (delete) {
-    GluiTextEditorLine *line = glui_get_line(editor, editor->row);
-    DA_REMOVE_AT(*line, editor->col);
-  }
 }
 
 void glui_text_editor_move_right_word(GluiTextEditor *editor, bool delete) {
