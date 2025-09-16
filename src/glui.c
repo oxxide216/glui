@@ -22,6 +22,8 @@ static void glui_init_root_list(Glui *glui) {
 
   glui->current_list->as.list.kind = GluiListKindVertical;
   glui->current_list->as.list.margin = vec2(0.0, 0.0);
+
+  DA_APPEND(glui->widgets, glui->current_list);
 }
 
 Glui glui_init(WinxWindow *window, char *font_file_path) {
@@ -39,8 +41,14 @@ Glui glui_init(WinxWindow *window, char *font_file_path) {
 }
 
 static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
-  if (!root_widget->is_dirty)
+  if (!root_widget->is_dirty &&
+      (!root_widget->is_visible ||
+       (root_widget->kind == GluiWidgetKindList &&
+        root_widget->as.list.prev_children_count == root_widget->as.list.children.len)))
     return;
+
+  if (root_widget->kind == GluiWidgetKindList)
+    root_widget->as.list.prev_children_count = root_widget->as.list.children.len;
 
   if (!root_widget->are_bounds_abs)
     root_widget->bounds = bounds;
@@ -48,6 +56,7 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
   if (root_widget->kind != GluiWidgetKindList ||
       root_widget->as.list.children.len == 0)
     return;
+
 
   Vec4 free_space = vec4(root_widget->bounds.x + root_widget->as.list.margin.x,
                          root_widget->bounds.y + root_widget->as.list.margin.y,
@@ -71,6 +80,7 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
           temp_free_space.z = 0.0;
       }
     }
+
     child_width = (temp_free_space.z - root_widget->as.list.margin.x *
                    (root_widget->as.list.children.len - 1.0)) /
                    fillers_count;
@@ -90,6 +100,7 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
           temp_free_space.w = 0.0;
       }
     }
+
     child_width = (temp_free_space.w - root_widget->as.list.margin.y *
                    (root_widget->as.list.children.len - 1.0)) /
                    fillers_count;
@@ -128,6 +139,20 @@ static void glui_compute_bounds(GluiWidget *root_widget, Vec4 bounds) {
   }
 }
 
+static void glui_reset_widget(GluiWidget *widget, bool is_dirty) {
+  widget->is_dirty = is_dirty;
+  widget->is_visible = false;
+
+  if (widget->kind != GluiWidgetKindList)
+    return;
+
+  for (u32 i = 0; i < widget->as.list.children.len; ++i)
+    glui_reset_widget(widget->as.list.children.items[i], is_dirty);
+
+  widget->as.list.prev_children_count = widget->as.list.children.len;
+  widget->as.list.children.len = 0;
+}
+
 void glui_next_frame(Glui *glui) {
   glui->current_list = glui->root_widget;
   glui->current_list->style = *glui_get_style(glui, "root");
@@ -136,17 +161,24 @@ void glui_next_frame(Glui *glui) {
   glui_compute_bounds(glui->root_widget, root_widget_bounds);
   glui_render(&glui->renderer, glui->root_widget);
 
+  bool is_layout_dirty = false;
+
   if (glui->renderer.size.x != (f32) glui->window->width) {
     glui->size.x = (f32) glui->window->width;
     glui->renderer.size.x = (f32) glui->window->width;
     glui->root_widget->is_dirty = true;
+    is_layout_dirty = true;
   }
 
   if (glui->renderer.size.y != (f32) glui->window->height) {
     glui->size.y = (f32) glui->window->height;
     glui->renderer.size.y = (f32) glui->window->height;
     glui->root_widget->is_dirty = true;
+    is_layout_dirty = true;
   }
+
+  glui_reset_widget(glui->root_widget, is_layout_dirty);
+  glui->root_widget->is_visible = true;
 
   glui->events.len = 0;
   WinxEvent event;
@@ -175,28 +207,25 @@ void glui_fixed_width(Glui *glui, f32 width) {
   glui->fixed_width = width;
 }
 
-static GluiWidget *glui_get_widget_rec(GluiWidget *root_widget, char *file_name, u32 line) {
-  if (strcmp(root_widget->id.file_name, file_name) == 0 &&
-      root_widget->id.line == line)
-    return root_widget;
+static void glui_mark_widget_as_dirty(GluiWidget *widget) {
+  widget->is_dirty = true;
 
-  if (root_widget->kind != GluiWidgetKindList)
-    return NULL;
-
-  for (u32 i = 0; i < root_widget->as.list.children.len; ++i) {
-    GluiWidget *child = root_widget->as.list.children.items[i];
-    GluiWidget *widget = glui_get_widget_rec(child, file_name, line);
-    if (widget)
-      return widget;
-  }
-
-  return NULL;
+  if (widget->parent)
+    glui_mark_widget_as_dirty(widget->parent);
 }
 
-static GluiWidget *glui_get_widget(GluiWidget *root_widget,
-                                   GluiWidget *current_list,
-                                   char *file_name, u32 line) {
-  GluiWidget *widget = glui_get_widget_rec(root_widget, file_name, line);
+static GluiWidget *glui_get_widget(Glui *glui, char *file_name, u32 line) {
+  GluiWidget *widget = NULL;
+
+  for (u32 i = 0; i < glui->widgets.len; ++i) {
+    GluiWidget *temp_widget = glui->widgets.items[i];
+    if (strcmp(temp_widget->id.file_name, file_name) == 0 &&
+        temp_widget->id.line == line) {
+      widget = temp_widget;
+      break;
+    }
+  }
+
   if (widget)
     return widget;
 
@@ -204,27 +233,26 @@ static GluiWidget *glui_get_widget(GluiWidget *root_widget,
   *widget = (GluiWidget) {0};
   widget->id.file_name = file_name;
   widget->id.line = line;
+  widget->is_dirty = true;
 
-  DA_APPEND(current_list->as.list.children, widget);
+  DA_APPEND(glui->widgets, widget);
 
   return widget;
 }
 
 GluiWidget *glui_setup_widget(Glui *glui, GluiWidgetKind kind,
                               char *file_name, u32 line, char *class) {
-  GluiWidget *widget = glui_get_widget(glui->root_widget,
-                                       glui->current_list,
-                                       file_name, line);
+  GluiWidget *widget = glui_get_widget(glui, file_name, line);
   GluiStyle *style = glui_get_style(glui, class);
 
-  if (widget->kind != kind ||
-      !widget->style.class ||
-      !glui_style_eq(&widget->style, style) ||
-      widget->are_bounds_abs != glui->are_bounds_abs ||
+  widget->parent = glui->current_list;
+
+  if (widget->are_bounds_abs != glui->are_bounds_abs ||
+      widget->fixed_width != glui->fixed_width ||
+      widget->is_dirty ||
       (glui->are_bounds_abs &&
-       !glui_vec4_eq(&widget->bounds, &glui->current_abs_bounds)) ||
-      widget->parent != glui->current_list)
-    widget->is_dirty = true;
+       !glui_vec4_eq(&widget->bounds, &glui->current_abs_bounds)))
+    glui_mark_widget_as_dirty(widget);
 
   widget->kind = kind;
   widget->style = *style;
@@ -235,7 +263,9 @@ GluiWidget *glui_setup_widget(Glui *glui, GluiWidgetKind kind,
     widget->fixed_width = glui->fixed_width;
     glui->fixed_width = 0.0;
   }
-  widget->parent = glui->current_list;
+  widget->is_visible = true;
+
+  DA_APPEND(glui->current_list->as.list.children, widget);
 
   return widget;
 }
@@ -244,9 +274,6 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
                     GluiWStr text, char *class) {
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindButton,
                                          file_name, line, class);
-
-  if (!glui_wstr_eq(widget->as.button.text, text))
-    widget->is_dirty = true;
 
   widget->as.button.text = text;
 
@@ -260,13 +287,10 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
       f32 y = (f32) event->as.button.y;
 
       if (x >= widget->bounds.x && x <= widget->bounds.x + widget->bounds.z &&
-          y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w) {
-        widget->is_dirty = true;
+          y >= widget->bounds.y && y <= widget->bounds.y + widget->bounds.w)
         widget->as.button.pressed = true;
-      }
     } else if (widget->as.button.pressed &&
                event->kind == WinxEventKindButtonRelease) {
-      widget->is_dirty = true;
       widget->as.button.pressed = false;
 
       f32 x = (f32) event->as.button.x;
@@ -288,7 +312,7 @@ void glui_begin_list_id(Glui *glui, char *file_name, u32 line,
 
   if (widget->as.list.kind != kind ||
       !glui_vec2_eq(&widget->as.list.margin, &margin))
-    widget->is_dirty = true;
+    glui_mark_widget_as_dirty(widget);
 
   widget->as.list.kind = kind;
   widget->as.list.margin = margin;
@@ -302,15 +326,13 @@ void glui_end_list(Glui *glui) {
     glui->current_list = glui->current_list->parent;
 }
 
-void glui_text_id(Glui *glui, char *file_name,
-                  u32 line, GluiWStr text, char *class) {
+void glui_text_id(Glui *glui, char *file_name, u32 line,
+                  GluiWStr text, bool center, char *class) {
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindText,
                                          file_name, line, class);
 
-  if (!glui_wstr_eq(widget->as.text.text, text))
-    widget->is_dirty = true;
-
   widget->as.text.text = text;
+  widget->as.text.center = center;
 
   glui->are_bounds_abs = false;
 }
@@ -319,9 +341,6 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
                                     f32 text_size, char *class) {
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindTextEditor,
                                          file_name, line, class);
-
-  if (widget->as.text_editor.text_size != text_size)
-    widget->is_dirty = true;
 
   if (widget->as.text_editor.editor.lines.len == 0)
     DA_APPEND(widget->as.text_editor.editor.lines, (GluiTextEditorLine) {0});

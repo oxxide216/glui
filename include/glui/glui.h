@@ -16,8 +16,8 @@
 #define glui_begin_list(glui, kind, margin, class)                  \
   glui_begin_list_id(glui, __FILE__, __LINE__, kind, margin, class)
 
-#define glui_text(glui, text, class)                  \
-  glui_text_id(glui, __FILE__, __LINE__, text, class)
+#define glui_text(glui, text, center, class)                  \
+  glui_text_id(glui, __FILE__, __LINE__, text, center, class)
 
 #define glui_text_editor(glui, text_size, class)                  \
   glui_text_editor_id(glui, __FILE__, __LINE__, text_size, class)
@@ -28,6 +28,7 @@ typedef struct {
   Vec2          size;
   GluiWidget   *root_widget;
   GluiWidget   *current_list;
+  GluiWidgets   widgets;
   GluiStyles    styles;
   GluiRenderer  renderer;
   WinxWindow   *window;
@@ -51,7 +52,7 @@ void            glui_begin_list_id(Glui *glui, char *file_name, u32 line,
                                GluiListKind kind, Vec2 margin, char *class);
 void            glui_end_list(Glui *glui);
 void            glui_text_id(Glui *glui, char *file_name, u32 line,
-                             GluiWStr text, char *class);
+                             GluiWStr text, bool center, char *class);
 GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
                                     f32 text_size, char *class);
 

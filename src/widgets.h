@@ -30,10 +30,12 @@ typedef struct {
   GluiListKind kind;
   GluiWidgets  children;
   Vec2         margin;
+  u32          prev_children_count;
 } GluiWidgetList;
 
 typedef struct {
   GluiWStr text;
+  bool     center;
 } GluiWidgetText;
 
 typedef struct {
@@ -73,6 +75,7 @@ struct GluiWidget {
   f32             fixed_width;
   bool            are_bounds_abs;
   bool            is_dirty;
+  bool            is_visible;
   GluiWidget     *parent;
 };
 

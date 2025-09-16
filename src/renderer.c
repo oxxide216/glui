@@ -292,6 +292,9 @@ static GluiGlyph *glui_gen_text_primitives(GluiRenderer *renderer,
 }
 
 static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widget) {
+  if (!widget->is_visible)
+    return;
+
   switch (widget->kind) {
   case GluiWidgetKindButton: {
     Vec4 bg_color, fg_color;
@@ -321,7 +324,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
   case GluiWidgetKindText: {
     glui_gen_text_primitives(renderer, widget,
                              widget->as.text.text,
-                             widget->bounds, true,
+                             widget->bounds, widget->as.text.center,
                              widget->style.fg_color);
   } break;
 
