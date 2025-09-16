@@ -281,6 +281,8 @@ bool glui_button_id(Glui *glui, char *file_name, u32 line,
 
   for (u32 i = 0; i < glui->events.len; ++i) {
     WinxEvent *event = glui->events.items + i;
+    if (event->was_processed)
+      continue;
 
     if (event->kind == WinxEventKindButtonPress) {
       f32 x = (f32) event->as.button.x;
@@ -353,6 +355,8 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
 
   for (u32 i = 0; i < glui->events.len; ++i) {
     WinxEvent *event = glui->events.items + i;
+    if (event->was_processed)
+      continue;
 
     if (event->kind == WinxEventKindKeyRelease) {
       if (event->as.key.key_code == WinxKeyCodeLeftControl)
