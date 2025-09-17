@@ -340,14 +340,13 @@ void glui_text_id(Glui *glui, char *file_name, u32 line,
 }
 
 GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
-                                    f32 text_size, Vec2 scroll, char *class) {
+                                    f32 text_size, Vec2 scroll_speed, char *class) {
   GluiWidget *widget = glui_setup_widget(glui, GluiWidgetKindTextEditor,
                                          file_name, line, class);
 
   if (widget->as.text_editor.editor.lines.len == 0)
     DA_APPEND(widget->as.text_editor.editor.lines, (GluiTextEditorLine) {0});
   widget->as.text_editor.text_size = text_size;
-  widget->as.text_editor.scroll = scroll;
 
   glui->are_bounds_abs = false;
 
@@ -440,6 +439,14 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
 
       if (!widget->is_dirty)
         widget->is_dirty = new_is_dirty;
+    } else if (event->kind == WinxEventKindButtonPress) {
+      if (event->as.button.button == WinxMouseButtonWheelUp)
+        widget->as.text_editor.scroll.y += scroll_speed.y;
+      if (event->as.button.button == WinxMouseButtonWheelDown)
+        widget->as.text_editor.scroll.y -= scroll_speed.y;
+
+      if (widget->as.text_editor.scroll.y < 0.0)
+        widget->as.text_editor.scroll.y = 0.0;
     }
   }
 
