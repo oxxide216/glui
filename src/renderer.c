@@ -212,14 +212,13 @@ static f32 glui_calculate_text_width(GluiRenderer *renderer, GluiWStr text,
       continue;
     }
 
-    bool is_space = _char == ' ';
-    if (is_space)
+    if (_char == ' ')
       _char = SPACE_ANALOG;
 
     u32 glyph_index = glui_get_glyph_index(renderer, _char, text_size, scale);
     GluiGlyph *glyph = renderer->glyphs.items + glyph_index;
 
-    width += glyph->size.x + CHAR_SPACING * (text_size + is_space);
+    width += glyph->size.x + CHAR_SPACING * text_size;
   }
 
   if (max_width < width)
