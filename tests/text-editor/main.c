@@ -10,7 +10,7 @@
 #define MAIN_BG_COLOR vec4(0.1, 0.1, 0.1, 0.8)
 #define TEXT_COLOR    vec4(0.5, 0.5, 0.7, 1.0)
 #define TEXT_SIZE     36.0
-#define SCROLL_SPEED  10.0
+#define SCROLL_SPEED  15.0
 
 typedef enum {
   ActionNone = 0,
@@ -38,9 +38,9 @@ Action process_event(WinxEvent *event, bool *is_ctrl_pressed, f32 *scroll) {
     if (event->as.key.key_code == WinxKeyCodeLeftControl)
       *is_ctrl_pressed = false;
   } else if (event->kind == WinxEventKindButtonPress) {
-    if (event->as.button.button == WinxMouseButtonSide1)
+    if (event->as.button.button == WinxMouseButtonWheelUp)
       *scroll -= SCROLL_SPEED;
-    else if (event->as.button.button == WinxMouseButtonSide2)
+    else if (event->as.button.button == WinxMouseButtonWheelDown)
       *scroll += SCROLL_SPEED;
 
     if (*scroll < 0.0)
