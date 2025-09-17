@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
   GluiTextEditor editor;
   f32            text_size;
+  Vec2           scroll;
   bool           ctrl_pressed;
 } GluiWidgetTextEditor;
 

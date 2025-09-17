@@ -335,6 +335,7 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
     GluiWidgetTextEditor *editor_widget = &widget->as.text_editor;
 
     Vec4 text_bounds = widget->bounds;
+    text_bounds.y -= editor_widget->scroll.y;
     text_bounds.w = editor_widget->text_size;
     f32 text_size_scaled = editor_widget->text_size * TEXT_SIZE_MULTIPLIER;
 
@@ -347,8 +348,12 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
       if (i == editor_widget->editor.row)
         text.len = editor_widget->editor.col;
 
-      if (text_bounds.y + text_bounds.w >=
-          widget->bounds.y + widget->bounds.w)
+      if (text_bounds.y + text_bounds.w <= widget->bounds.y) {
+        text_bounds.y += text_size_scaled;
+        continue;
+      }
+
+      if (text_bounds.y >= widget->bounds.y + widget->bounds.w)
         break;
 
       GluiGlyph *last_glyph = glui_gen_text_primitives(renderer, widget, text, text_bounds,
@@ -376,8 +381,12 @@ static void glui_gen_widget_primitives(GluiRenderer *renderer, GluiWidget *widge
         if (editor_widget->editor.col > 0)
           text_bounds.x += CHAR_SPACING * text_size_scaled;
 
-        if (text_bounds.y + text_bounds.w >=
-            widget->bounds.y + widget->bounds.w)
+        if (text_bounds.y + text_bounds.w <= widget->bounds.y) {
+          text_bounds.y += text_size_scaled;
+          continue;
+        }
+
+        if (text_bounds.y >= widget->bounds.y + widget->bounds.w)
           break;
 
         glui_gen_text_primitives(renderer, widget, text, text_bounds,

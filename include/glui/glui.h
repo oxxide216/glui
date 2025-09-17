@@ -19,8 +19,8 @@
 #define glui_text(glui, text, center, class)                  \
   glui_text_id(glui, __FILE__, __LINE__, text, center, class)
 
-#define glui_text_editor(glui, text_size, class)                  \
-  glui_text_editor_id(glui, __FILE__, __LINE__, text_size, class)
+#define glui_text_editor(glui, text_size, scroll, class)                  \
+  glui_text_editor_id(glui, __FILE__, __LINE__, text_size, scroll, class)
 
 typedef Da(WinxEvent) GluiEvents;
 
@@ -54,6 +54,6 @@ void            glui_end_list(Glui *glui);
 void            glui_text_id(Glui *glui, char *file_name, u32 line,
                              GluiWStr text, bool center, char *class);
 GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
-                                    f32 text_size, char *class);
+                                    f32 text_size, Vec2 scroll, char *class);
 
 #endif // GLUI_H

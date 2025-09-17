@@ -6,10 +6,11 @@
 #define SHL_STR_IMPLEMENTATION
 #include "shl_str.h"
 
-#define ROOT_BG_COLOR    vec4(0.0, 0.0, 0.0, 0.0)
-#define MAIN_BG_COLOR    vec4(0.1, 0.1, 0.1, 0.8)
-#define TEXT_COLOR       vec4(0.5, 0.5, 0.7, 1.0)
-#define TEXT_SIZE        36.0
+#define ROOT_BG_COLOR vec4(0.0, 0.0, 0.0, 0.0)
+#define MAIN_BG_COLOR vec4(0.1, 0.1, 0.1, 0.8)
+#define TEXT_COLOR    vec4(0.5, 0.5, 0.7, 1.0)
+#define TEXT_SIZE     36.0
+#define SCROLL_SPEED  10.0
 
 typedef enum {
   ActionNone = 0,
@@ -18,7 +19,7 @@ typedef enum {
   ActionOpen,
 } Action;
 
-Action process_event(WinxEvent *event, bool *is_ctrl_pressed) {
+Action process_event(WinxEvent *event, bool *is_ctrl_pressed, f32 *scroll) {
   if (event->kind == WinxEventKindQuit) {
     return ActionQuit;
   } else if (event->kind == WinxEventKindResize) {
@@ -36,6 +37,14 @@ Action process_event(WinxEvent *event, bool *is_ctrl_pressed) {
   } else if (event->kind == WinxEventKindKeyRelease) {
     if (event->as.key.key_code == WinxKeyCodeLeftControl)
       *is_ctrl_pressed = false;
+  } else if (event->kind == WinxEventKindButtonPress) {
+    if (event->as.button.button == WinxMouseButtonSide1)
+      *scroll -= SCROLL_SPEED;
+    else if (event->as.button.button == WinxMouseButtonSide2)
+      *scroll += SCROLL_SPEED;
+
+    if (*scroll < 0.0)
+      *scroll = 1.0;
   }
 
   return ActionNone;
@@ -48,10 +57,10 @@ void setup_styles(Glui *glui) {
   glui_get_style(glui, "text-editor")->fg_color = TEXT_COLOR;
 }
 
-void render_ui(Glui *glui, GluiTextEditor **editor) {
+void render_ui(Glui *glui, GluiTextEditor **editor, f32 scroll) {
   glui_begin_list(glui, GluiListKindHorizontal, vec2(5.0, 5.0), "block");
 
-  *editor = glui_text_editor(glui, TEXT_SIZE, "text-editor");
+  *editor = glui_text_editor(glui, TEXT_SIZE, vec2(0.0, scroll), "text-editor");
 
   glui_end_list(glui);
 }
@@ -67,11 +76,14 @@ int main(void) {
 
   GluiTextEditor *editor = NULL;;
   bool is_ctrl_pressed = false;
+  f32 scroll = 0.0;
   bool is_running = true;
 
   while (is_running) {
     for (u32 i = 0; i < glui.events.len; ++i) {
-      Action action = process_event(glui.events.items + i, &is_ctrl_pressed);
+      Action action = process_event(glui.events.items + i,
+                                    &is_ctrl_pressed,
+                                    &scroll);
 
       if (action == ActionQuit) {
         is_running = false;
@@ -113,7 +125,7 @@ int main(void) {
       }
     }
 
-    render_ui(&glui, &editor);
+    render_ui(&glui, &editor, scroll);
     glui_next_frame(&glui);
     winx_draw(&window);
   }
