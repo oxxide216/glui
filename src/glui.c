@@ -161,23 +161,23 @@ void glui_next_frame(Glui *glui) {
   glui_compute_bounds(glui->root_widget, root_widget_bounds);
   glui_render(&glui->renderer, glui->root_widget);
 
-  bool is_layout_dirty = false;
+  bool layout_is_dirty = false;
 
   if (glui->renderer.size.x != (f32) glui->window->width) {
     glui->size.x = (f32) glui->window->width;
     glui->renderer.size.x = (f32) glui->window->width;
     glui->root_widget->is_dirty = true;
-    is_layout_dirty = true;
+    layout_is_dirty = true;
   }
 
   if (glui->renderer.size.y != (f32) glui->window->height) {
     glui->size.y = (f32) glui->window->height;
     glui->renderer.size.y = (f32) glui->window->height;
     glui->root_widget->is_dirty = true;
-    is_layout_dirty = true;
+    layout_is_dirty = true;
   }
 
-  glui_reset_widget(glui->root_widget, is_layout_dirty);
+  glui_reset_widget(glui->root_widget, layout_is_dirty);
   glui->root_widget->is_visible = true;
 
   glui->events.len = 0;
@@ -366,7 +366,7 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
       WinxKeyCode key_code = event->as.key.key_code;
       GluiWChar _char = event->as.key._char;
 
-      bool new_is_dirty = true;
+      bool new_is_dirty = false;
       u32 prev_row = widget->as.text_editor.editor.row;
 
       switch (key_code) {
@@ -408,6 +408,8 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
           glui_text_editor_move_left_word(&widget->as.text_editor.editor, true);
         else
           glui_text_editor_delete_prev(&widget->as.text_editor.editor);
+
+        new_is_dirty = true;
       } break;
 
       case WinxKeyCodeDelete: {
@@ -415,31 +417,34 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
           glui_text_editor_move_right_word(&widget->as.text_editor.editor, true);
         else
           glui_text_editor_delete_next(&widget->as.text_editor.editor);
+
+        new_is_dirty = true;
       } break;
 
       case WinxKeyCodeTab: {
-        if (!widget->as.text_editor.ctrl_pressed)
+        if (!widget->as.text_editor.ctrl_pressed) {
           for (u32 i = 0; i < TEXT_EDITOR_TAB_WIDTH; ++i)
             glui_text_editor_insert(&widget->as.text_editor.editor, ' ');
+          new_is_dirty = true;
+        }
       } break;
 
       case WinxKeyCodeEnter: {
-        if (!widget->as.text_editor.ctrl_pressed)
+        if (!widget->as.text_editor.ctrl_pressed) {
           glui_text_editor_insert(&widget->as.text_editor.editor, '\n');
+          new_is_dirty = true;
+        }
       } break;
 
       default: {
-        if (!widget->as.text_editor.ctrl_pressed) {
-          if (_char)
-            glui_text_editor_insert(&widget->as.text_editor.editor, _char);
-          else
-            new_is_dirty = false;
+        if (!widget->as.text_editor.ctrl_pressed && _char) {
+          glui_text_editor_insert(&widget->as.text_editor.editor, _char);
+          new_is_dirty = true;
         }
       } break;
       }
 
-      if (!widget->is_dirty)
-        widget->is_dirty = new_is_dirty;
+      widget->is_dirty |= new_is_dirty;
 
       f32 text_size_scaled = widget->as.text_editor.text_size * TEXT_SIZE_MULTIPLIER;
 
