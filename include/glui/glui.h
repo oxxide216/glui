@@ -10,6 +10,8 @@
 #include "../../src/renderer.h"
 #include "../../src/text-editor.h"
 
+#define TEXT_SIZE_MULTIPLIER 0.6
+
 #define glui_button(glui, text, class)                  \
   glui_button_id(glui, __FILE__, __LINE__, text, class)
 

@@ -367,6 +367,7 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
       GluiWChar _char = event->as.key._char;
 
       bool new_is_dirty = true;
+      u32 prev_row = widget->as.text_editor.editor.row;
 
       switch (key_code) {
       case WinxKeyCodeLeftControl: {
@@ -439,15 +440,28 @@ GluiTextEditor *glui_text_editor_id(Glui *glui, char *file_name, u32 line,
 
       if (!widget->is_dirty)
         widget->is_dirty = new_is_dirty;
+
+      f32 text_size_scaled = widget->as.text_editor.text_size * TEXT_SIZE_MULTIPLIER;
+
+      if (widget->as.text_editor.editor.row > prev_row &&
+          (widget->as.text_editor.editor.row + 1) * text_size_scaled >
+          widget->bounds.w)
+        widget->as.text_editor.scroll.y += (widget->as.text_editor.editor.row - prev_row) *
+                                           text_size_scaled;
+      else if (widget->as.text_editor.editor.row * text_size_scaled <
+               widget->as.text_editor.scroll.y - glui->renderer.font_descent)
+        widget->as.text_editor.scroll.y -= (prev_row - widget->as.text_editor.editor.row) *
+                                           text_size_scaled;
+
     } else if (event->kind == WinxEventKindButtonPress) {
       if (event->as.button.button == WinxMouseButtonWheelUp)
         widget->as.text_editor.scroll.y += scroll_speed.y;
       if (event->as.button.button == WinxMouseButtonWheelDown)
         widget->as.text_editor.scroll.y -= scroll_speed.y;
-
-      if (widget->as.text_editor.scroll.y < 0.0)
-        widget->as.text_editor.scroll.y = 0.0;
     }
+
+    if (widget->as.text_editor.scroll.y < 0.0)
+      widget->as.text_editor.scroll.y = 0.0;
   }
 
   return &widget->as.text_editor.editor;
